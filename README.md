@@ -61,6 +61,7 @@ client = Honchox.new()
 | `Honchox.Peers` | Peer lifecycle, chat, context, representation, cards |
 | `Honchox.Sessions` | Session lifecycle, messages, peer membership, context, files |
 | `Honchox.Conclusions` | Conclusion CRUD and semantic search |
+| `Honchox.Keys` | Scoped JWT creation and delegated authentication |
 | `Honchox.Observations` | *(deprecated)* Backward-compatible aliases for conclusions |
 | `Honchox.Error` | Structured error with kind, status, and body |
 
@@ -68,7 +69,8 @@ client = Honchox.new()
 
 | Option         | Env var          | Default                  |
 |----------------|------------------|--------------------------|
-| `:api_key`     | `HONCHO_API_KEY` | *(required)*             |
+| `:api_key`     | `HONCHO_API_KEY` | *(required unless `:jwt`)* |
+| `:jwt`         | —                | *(scoped bearer token)*  |
 | `:base_url`    | `HONCHO_URL`     | `https://api.honcho.ai`  |
 | `:timeout`     | —                | `60_000` ms              |
 | `:max_retries` | —                | `2`                      |

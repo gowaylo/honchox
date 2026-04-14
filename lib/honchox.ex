@@ -45,7 +45,8 @@ defmodule Honchox do
 
   @typedoc "A configured Honcho API client."
   @type t :: %__MODULE__{
-          api_key: String.t(),
+          api_key: String.t() | nil,
+          jwt: String.t() | nil,
           base_url: String.t(),
           workspace_id: String.t() | nil,
           req: Req.Request.t(),
@@ -56,11 +57,12 @@ defmodule Honchox do
   @typedoc "Options accepted by `new/1`."
   @type client_option ::
           {:api_key, String.t()}
+          | {:jwt, String.t()}
           | {:base_url, String.t()}
           | {:timeout, pos_integer()}
           | {:max_retries, non_neg_integer()}
 
-  defstruct [:api_key, :base_url, :workspace_id, :req, :timeout, :max_retries]
+  defstruct [:api_key, :jwt, :base_url, :workspace_id, :req, :timeout, :max_retries]
 
   @doc """
   Builds a new Honcho API client.
@@ -70,8 +72,10 @@ defmodule Honchox do
 
   ## Options
 
-    * `:api_key` — Honcho API key. Falls back to the `HONCHO_API_KEY` env var.
-      **Required.**
+    * `:api_key` — Honcho API key. Falls back to the `HONCHO_API_KEY` env var
+      when `:jwt` is not provided.
+    * `:jwt` — scoped JWT bearer token. When provided, it is used for auth
+      instead of `:api_key`.
     * `:base_url` — API base URL. Falls back to `HONCHO_URL` env var, then
       `#{@default_base_url}`. (default: `"#{@default_base_url}"`)
     * `:timeout` — receive timeout in milliseconds (default: `#{@default_timeout}`)
@@ -92,22 +96,25 @@ defmodule Honchox do
   """
   @spec new([client_option]) :: t()
   def new(opts \\ []) when is_list(opts) do
-    api_key = required_config_value!(opts, :api_key, "HONCHO_API_KEY")
+    jwt = Keyword.get(opts, :jwt)
+    api_key = if jwt, do: nil, else: required_config_value!(opts, :api_key, "HONCHO_API_KEY")
+    token = jwt || api_key
     base_url = config_value(opts, :base_url, "HONCHO_URL", @default_base_url)
     timeout = Keyword.get(opts, :timeout, @default_timeout)
     max_retries = Keyword.get(opts, :max_retries, @default_max_retries)
 
     req_opts =
       opts
-      |> Keyword.drop([:api_key, :workspace_id, :base_url, :timeout, :max_retries])
+      |> Keyword.drop([:api_key, :jwt, :workspace_id, :base_url, :timeout, :max_retries])
       |> Keyword.put_new(:base_url, base_url)
-      |> Keyword.put_new(:auth, {:bearer, api_key})
+      |> Keyword.put_new(:auth, {:bearer, token})
       |> Keyword.put_new(:receive_timeout, timeout)
       |> Keyword.put_new(:retry, :transient)
       |> Keyword.put_new(:max_retries, max_retries)
 
     %__MODULE__{
       api_key: api_key,
+      jwt: jwt,
       base_url: base_url,
       workspace_id: nil,
       timeout: timeout,

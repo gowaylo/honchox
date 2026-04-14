@@ -256,6 +256,39 @@ client = Honchox.new(
 )
 ```
 
+## Scoped Keys
+
+### Create a scoped key
+
+```elixir
+admin = Honchox.new()
+
+{:ok, %{"key" => jwt}} = Honchox.Keys.create(admin,
+  workspace_id: "my-workspace",
+  expires_in: {1, :hour}
+)
+```
+
+### Create a scoped client directly
+
+```elixir
+{:ok, client} = Honchox.Keys.create_client(admin,
+  workspace_id: "my-workspace",
+  peer_id: "alice",
+  expires_in: {30, :days}
+)
+```
+
+### Use a scoped JWT
+
+```elixir
+client = Honchox.new(jwt: "eyJ...")
+
+{:ok, peers} = Honchox.Peers.list(client,
+  workspace_id: "my-workspace"
+)
+```
+
 ## Error Handling
 
 ### Pattern matching on errors

@@ -50,12 +50,13 @@ client = Honchox.new(
 
 ### Client options
 
-| Option         | Default                    | Description                      |
-|----------------|----------------------------|----------------------------------|
-| `:api_key`     | `HONCHO_API_KEY` env var   | Honcho API key (**required**)    |
-| `:base_url`    | `https://api.honcho.ai`   | API base URL                     |
-| `:timeout`     | `60_000`                   | Receive timeout in ms            |
-| `:max_retries` | `2`                        | Retries on transient failures    |
+| Option         | Default                    | Description                              |
+|----------------|----------------------------|------------------------------------------|
+| `:api_key`     | `HONCHO_API_KEY` env var   | Admin API key (required unless `:jwt`)   |
+| `:jwt`         | *(none)*                   | Scoped JWT token (see [Scoped Keys](scoped-keys.html)) |
+| `:base_url`    | `https://api.honcho.ai`   | API base URL                             |
+| `:timeout`     | `60_000`                   | Receive timeout in ms                    |
+| `:max_retries` | `2`                        | Retries on transient failures            |
 
 ## Core concepts
 
@@ -182,7 +183,29 @@ case Honchox.Peers.get_or_create(client, "alice", workspace_id: "ws") do
 end
 ```
 
+## Scoped keys
+
+If you need to delegate limited access (e.g. to a frontend), you can create
+scoped JWT keys from an admin client:
+
+```elixir
+admin = Honchox.new()
+
+# Create a client restricted to one workspace, valid for 1 hour
+{:ok, scoped} = Honchox.Keys.create_client(admin,
+  workspace_id: "my-workspace",
+  expires_in: {1, :hour}
+)
+
+# This client can only access "my-workspace"
+{:ok, peers} = Honchox.Peers.list(scoped, workspace_id: "my-workspace")
+```
+
+See the [Scoped Keys](scoped-keys.html) guide for the full permission model
+and usage patterns.
+
 ## Next steps
 
 - Browse the [API Reference](api-reference.html) for all available functions
 - Check the [Cheatsheet](cheatsheet.html) for a quick reference card
+- Read the [Scoped Keys](scoped-keys.html) guide for delegated authentication

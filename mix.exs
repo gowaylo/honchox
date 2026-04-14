@@ -59,6 +59,7 @@ defmodule Honchox.MixProject do
     [
       "README.md",
       "guides/getting-started.md",
+      "guides/scoped-keys.md",
       "guides/cheatsheet.cheatmd"
     ]
   end
@@ -70,7 +71,8 @@ defmodule Honchox.MixProject do
         Honchox.Workspaces,
         Honchox.Peers,
         Honchox.Sessions,
-        Honchox.Conclusions
+        Honchox.Conclusions,
+        Honchox.Keys
       ],
       "High-level": [Honchox.PeerWorkspaceQA],
       "Legacy / Compat": [Honchox.Observations],
@@ -81,6 +83,7 @@ defmodule Honchox.MixProject do
   defp groups_for_extras do
     [
       Introduction: ["README.md", "guides/getting-started.md"],
+      Guides: ["guides/scoped-keys.md"],
       Reference: ["guides/cheatsheet.cheatmd"]
     ]
   end

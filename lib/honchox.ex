@@ -1,28 +1,96 @@
 defmodule Honchox do
   @moduledoc """
-  Honcho API client for the v3 HTTP API.
+  Req-based Elixir client for the Honcho v3 HTTP API.
 
-  ## Examples
+  `Honchox` is the main entry point for interacting with the
+  [Honcho](https://honcho.dev) API. It wraps [`Req`](https://hexdocs.pm/req)
+  with built-in authentication, retry logic, and structured error handling.
 
-      iex> client = Honchox.new(api_key: "secret")
-      iex> client.workspace_id
-      nil
-      iex> client.req.options[:auth]
-      {:bearer, "secret"}
+  ## Creating a client
+
+  Use `new/1` to build a client struct. The API key can be passed directly or
+  read from the `HONCHO_API_KEY` environment variable:
+
+      client = Honchox.new(api_key: "sk-...")
+
+  The base URL defaults to `https://api.honcho.ai` and can be overridden via
+  the `:base_url` option or the `HONCHO_URL` environment variable.
+
+  ## Workspace-scoped resources
+
+  Most resource endpoints (peers, sessions, conclusions) are scoped to a
+  workspace. Instead of storing the workspace ID in the client, you pass it
+  explicitly via the `:workspace_id` option on each call:
+
+      Honchox.Peers.get_or_create(client, "alice", workspace_id: "my-workspace")
+
+  ## Resource modules
+
+    * `Honchox.Workspaces` — workspace lifecycle, search, queue status, dream scheduling
+    * `Honchox.Peers` — peer lifecycle, chat, context, representation, cards
+    * `Honchox.Sessions` — session lifecycle, messages, peers, context, files
+    * `Honchox.Conclusions` — conclusion CRUD and semantic search
+    * `Honchox.Observations` — backward-compatible aliases for conclusions
+
+  ## Low-level HTTP
+
+  The `get/3`, `post/3`, `put/3`, `patch/3`, `delete/3`, and `upload/4`
+  functions are available for making direct API calls when the resource
+  modules don't cover a specific endpoint.
   """
 
   @default_base_url "https://api.honcho.ai"
   @default_timeout 60_000
   @default_max_retries 2
 
+  @typedoc "A configured Honcho API client."
+  @type t :: %__MODULE__{
+          api_key: String.t(),
+          base_url: String.t(),
+          workspace_id: String.t() | nil,
+          req: Req.Request.t(),
+          timeout: pos_integer(),
+          max_retries: non_neg_integer()
+        }
+
+  @typedoc "Options accepted by `new/1`."
+  @type client_option ::
+          {:api_key, String.t()}
+          | {:base_url, String.t()}
+          | {:timeout, pos_integer()}
+          | {:max_retries, non_neg_integer()}
+
   defstruct [:api_key, :base_url, :workspace_id, :req, :timeout, :max_retries]
 
   @doc """
-  Builds a client with a preconfigured `Req` request.
+  Builds a new Honcho API client.
 
-  The client carries authentication and transport defaults. Workspace-scoped
-  endpoints receive `workspace_id` in the function call that needs it.
+  Returns a `%Honchox{}` struct with a pre-configured `Req.Request` that
+  carries authentication and transport defaults.
+
+  ## Options
+
+    * `:api_key` — Honcho API key. Falls back to the `HONCHO_API_KEY` env var.
+      **Required.**
+    * `:base_url` — API base URL. Falls back to `HONCHO_URL` env var, then
+      `#{@default_base_url}`. (default: `"#{@default_base_url}"`)
+    * `:timeout` — receive timeout in milliseconds (default: `#{@default_timeout}`)
+    * `:max_retries` — max retries on transient failures (default: `#{@default_max_retries}`)
+
+  Any additional keyword options are forwarded to `Req.new/1`.
+
+  ## Examples
+
+      client = Honchox.new(api_key: "sk-...")
+      client.base_url
+      #=> "https://api.honcho.ai"
+
+      client = Honchox.new(api_key: "sk-...", base_url: "https://api.honcho.dev")
+      client.base_url
+      #=> "https://api.honcho.dev"
+
   """
+  @spec new([client_option]) :: t()
   def new(opts \\ []) when is_list(opts) do
     api_key = required_config_value!(opts, :api_key, "HONCHO_API_KEY")
     base_url = config_value(opts, :base_url, "HONCHO_URL", @default_base_url)
@@ -49,43 +117,64 @@ defmodule Honchox do
   end
 
   @doc """
-  Sends a GET request.
+  Sends a GET request to the given `path` with optional query `params`.
+
+  Returns `{:ok, body}` on success or `{:error, %Honchox.Error{}}` on failure.
   """
+  @spec get(t(), String.t(), keyword()) :: {:ok, term()} | {:error, Honchox.Error.t()}
   def get(%__MODULE__{} = client, path, params \\ []) do
     request(client, :get, path, params: params)
   end
 
   @doc """
-  Sends a POST request with JSON body.
+  Sends a POST request to the given `path` with a JSON `body`.
+
+  Returns `{:ok, body}` on success or `{:error, %Honchox.Error{}}` on failure.
   """
+  @spec post(t(), String.t(), term()) :: {:ok, term()} | {:error, Honchox.Error.t()}
   def post(%__MODULE__{} = client, path, body) do
     request(client, :post, path, json: body)
   end
 
   @doc """
-  Sends a PUT request with JSON body.
+  Sends a PUT request to the given `path` with a JSON `body`.
+
+  Returns `{:ok, body}` on success or `{:error, %Honchox.Error{}}` on failure.
   """
+  @spec put(t(), String.t(), term()) :: {:ok, term()} | {:error, Honchox.Error.t()}
   def put(%__MODULE__{} = client, path, body) do
     request(client, :put, path, json: body)
   end
 
   @doc """
-  Sends a PATCH request with JSON body.
+  Sends a PATCH request to the given `path` with a JSON `body`.
+
+  Returns `{:ok, body}` on success or `{:error, %Honchox.Error{}}` on failure.
   """
+  @spec patch(t(), String.t(), term()) :: {:ok, term()} | {:error, Honchox.Error.t()}
   def patch(%__MODULE__{} = client, path, body) do
     request(client, :patch, path, json: body)
   end
 
   @doc """
-  Sends a DELETE request.
+  Sends a DELETE request to the given `path` with optional query `params`.
+
+  Returns `{:ok, body}` on success or `{:error, %Honchox.Error{}}` on failure.
   """
+  @spec delete(t(), String.t(), keyword()) :: {:ok, term()} | {:error, Honchox.Error.t()}
   def delete(%__MODULE__{} = client, path, params \\ []) do
     request(client, :delete, path, params: params)
   end
 
   @doc """
-  Sends a multipart upload request.
+  Sends a multipart upload (POST) to the given `path`.
+
+  `fields` is a keyword list of form fields passed to Req's `:form_multipart`
+  option. Any extra `opts` are merged into the Req request options.
+
+  Returns `{:ok, body}` on success or `{:error, %Honchox.Error{}}` on failure.
   """
+  @spec upload(t(), String.t(), keyword(), keyword()) :: {:ok, term()} | {:error, Honchox.Error.t()}
   def upload(%__MODULE__{} = client, path, fields, opts \\ []) do
     request(client, :post, path, Keyword.merge(opts, form_multipart: fields))
   end

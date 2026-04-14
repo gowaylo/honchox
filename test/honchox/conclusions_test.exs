@@ -18,6 +18,7 @@ defmodule Honchox.ConclusionsTest do
 
     assert {:ok, %{"page" => 2}} =
              Honchox.Conclusions.list(client(),
+               workspace_id: "workspace-1",
                page: 2,
                size: 10,
                filters: %{observed_id: "alice"}
@@ -41,6 +42,7 @@ defmodule Honchox.ConclusionsTest do
 
     assert {:ok, [%{"id" => "c-1"}]} =
              Honchox.Conclusions.query(client(), "preferences",
+               workspace_id: "workspace-1",
                top_k: 5,
                distance: 0.4,
                filters: %{observed_id: "alice"}
@@ -75,7 +77,8 @@ defmodule Honchox.ConclusionsTest do
       }
     ]
 
-    assert {:ok, [%{"id" => "c-1"}]} = Honchox.Conclusions.create(client(), conclusions)
+    assert {:ok, [%{"id" => "c-1"}]} =
+             Honchox.Conclusions.create(client(), conclusions, workspace_id: "workspace-1")
   end
 
   test "delete/2 deletes a conclusion by id" do
@@ -85,7 +88,7 @@ defmodule Honchox.ConclusionsTest do
       Plug.Conn.send_resp(conn, 204, "")
     end)
 
-    assert {:ok, nil} = Honchox.Conclusions.delete(client(), "c-1")
+    assert {:ok, nil} = Honchox.Conclusions.delete(client(), "c-1", workspace_id: "workspace-1")
   end
 
   test "representation/2 posts representation helper options" do
@@ -104,6 +107,7 @@ defmodule Honchox.ConclusionsTest do
 
     assert {:ok, %{"representation" => "Concise and direct."}} =
              Honchox.Conclusions.representation(client(),
+               workspace_id: "workspace-1",
                observer_id: "assistant",
                observed_id: "alice",
                session_id: "session-1"
@@ -113,7 +117,6 @@ defmodule Honchox.ConclusionsTest do
   defp client do
     Honchox.new(
       api_key: "secret",
-      workspace_id: "workspace-1",
       base_url: "https://api.honcho.dev",
       plug: {Req.Test, HonchoxConclusionsStub}
     )

@@ -15,7 +15,8 @@ defmodule Honchox.ObservationsTest do
       Req.Test.json(conn, %{"items" => [%{"id" => "o-1"}]})
     end)
 
-    assert {:ok, %{"items" => [%{"id" => "o-1"}]}} = Honchox.Observations.list(client())
+    assert {:ok, %{"items" => [%{"id" => "o-1"}]}} =
+             Honchox.Observations.list(client(), workspace_id: "workspace-1")
   end
 
   test "query/3 delegates to the conclusions query endpoint" do
@@ -33,7 +34,8 @@ defmodule Honchox.ObservationsTest do
       Req.Test.json(conn, [%{"id" => "o-1"}])
     end)
 
-    assert {:ok, [%{"id" => "o-1"}]} = Honchox.Observations.query(client(), "memory")
+    assert {:ok, [%{"id" => "o-1"}]} =
+             Honchox.Observations.query(client(), "memory", workspace_id: "workspace-1")
   end
 
   test "delete/2 delegates to the conclusions delete endpoint" do
@@ -43,13 +45,12 @@ defmodule Honchox.ObservationsTest do
       Plug.Conn.send_resp(conn, 204, "")
     end)
 
-    assert {:ok, nil} = Honchox.Observations.delete(client(), "o-1")
+    assert {:ok, nil} = Honchox.Observations.delete(client(), "o-1", workspace_id: "workspace-1")
   end
 
   defp client do
     Honchox.new(
       api_key: "secret",
-      workspace_id: "workspace-1",
       base_url: "https://api.honcho.dev",
       plug: {Req.Test, HonchoxObservationsStub}
     )

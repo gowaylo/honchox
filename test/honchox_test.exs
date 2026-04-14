@@ -21,6 +21,23 @@ defmodule HonchoxTest do
     end
   end
 
+  test "new/1 does not require workspace_id" do
+    previous_env = env(["HONCHO_API_KEY", "HONCHO_WORKSPACE_ID", "HONCHO_URL"])
+
+    on_exit(fn -> restore_env(previous_env) end)
+
+    System.put_env("HONCHO_API_KEY", "env-secret")
+    System.put_env("HONCHO_WORKSPACE_ID", "env-ws")
+    System.put_env("HONCHO_URL", "https://api.env.example")
+
+    client = Honchox.new()
+
+    assert %Honchox{} = client
+    assert client.api_key == "env-secret"
+    assert client.workspace_id == nil
+    assert client.base_url == "https://api.env.example"
+  end
+
   test "new/1 uses explicit config over env vars" do
     previous_env = env(["HONCHO_API_KEY", "HONCHO_WORKSPACE_ID", "HONCHO_URL"])
 
@@ -39,10 +56,24 @@ defmodule HonchoxTest do
 
     assert %Honchox{} = client
     assert client.api_key == "explicit-secret"
-    assert client.workspace_id == "explicit-ws"
+    assert client.workspace_id == nil
     assert client.base_url == "https://api.explicit.example"
     assert client.req.options[:base_url] == "https://api.explicit.example"
     assert client.req.options[:auth] == {:bearer, "explicit-secret"}
+  end
+
+  test "new/1 does not read workspace_id from env vars" do
+    previous_env = env(["HONCHO_API_KEY", "HONCHO_WORKSPACE_ID", "HONCHO_URL"])
+
+    on_exit(fn -> restore_env(previous_env) end)
+
+    System.put_env("HONCHO_API_KEY", "env-secret")
+    System.put_env("HONCHO_WORKSPACE_ID", "env-ws")
+    System.put_env("HONCHO_URL", "https://api.env.example")
+
+    client = Honchox.new()
+
+    assert client.workspace_id == nil
   end
 
   test "get/3 sends bearer auth and query params" do
@@ -55,7 +86,6 @@ defmodule HonchoxTest do
     client =
       Honchox.new(
         api_key: "secret",
-        workspace_id: "ws",
         base_url: "https://api.honcho.dev",
         plug: {Req.Test, HonchoxStub}
       )
@@ -73,7 +103,6 @@ defmodule HonchoxTest do
     client =
       Honchox.new(
         api_key: "secret",
-        workspace_id: "ws",
         base_url: "https://api.honcho.dev",
         plug: {Req.Test, HonchoxStub}
       )
@@ -90,7 +119,6 @@ defmodule HonchoxTest do
     client =
       Honchox.new(
         api_key: "secret",
-        workspace_id: "ws",
         base_url: "https://api.honcho.dev",
         plug: {Req.Test, HonchoxStub}
       )
@@ -112,7 +140,6 @@ defmodule HonchoxTest do
     client =
       Honchox.new(
         api_key: "secret",
-        workspace_id: "ws",
         base_url: "https://api.honcho.dev",
         plug: {Req.Test, HonchoxStub}
       )
@@ -129,7 +156,6 @@ defmodule HonchoxTest do
     client =
       Honchox.new(
         api_key: "secret",
-        workspace_id: "ws",
         base_url: "https://api.honcho.dev",
         plug: {Req.Test, HonchoxStub},
         retry: false
@@ -153,7 +179,6 @@ defmodule HonchoxTest do
     client =
       Honchox.new(
         api_key: "secret",
-        workspace_id: "ws",
         base_url: "https://api.honcho.dev",
         plug: {Req.Test, HonchoxStub},
         retry: false

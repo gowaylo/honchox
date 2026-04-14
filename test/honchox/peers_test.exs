@@ -26,6 +26,7 @@ defmodule Honchox.PeersTest do
     # Act
     result =
       Honchox.Peers.get_or_create(client, "alice",
+        workspace_id: "workspace-1",
         metadata: %{role: "user"},
         configuration: %{observe_me: true}
       )
@@ -55,6 +56,7 @@ defmodule Honchox.PeersTest do
     # Act
     result =
       Honchox.Peers.update(client, "alice",
+        workspace_id: "workspace-1",
         metadata: %{role: "assistant"},
         configuration: %{observe_me: false}
       )
@@ -83,7 +85,7 @@ defmodule Honchox.PeersTest do
     client = client()
 
     # Act
-    result = Honchox.Peers.list(client, page: 2, size: 10, filters: %{role: "user"})
+    result = Honchox.Peers.list(client, workspace_id: "workspace-1", page: 2, size: 10, filters: %{role: "user"})
 
     # Assert
     assert {:ok, %{"page" => 2, "items" => [%{"id" => "alice"}]}} = result
@@ -111,6 +113,7 @@ defmodule Honchox.PeersTest do
     # Act
     result =
       Honchox.Peers.list_sessions(client, "alice",
+        workspace_id: "workspace-1",
         page: 3,
         size: 25,
         filters: %{is_active: true}
@@ -141,6 +144,7 @@ defmodule Honchox.PeersTest do
     # Act
     result =
       Honchox.Peers.chat(client, "alice", "What should I do next?",
+        workspace_id: "workspace-1",
         reasoning_level: "high",
         session_id: "session-9",
         target: "bob"
@@ -173,6 +177,7 @@ defmodule Honchox.PeersTest do
     # Act
     result =
       Honchox.Peers.search(client, "alice", "launch checklist",
+        workspace_id: "workspace-1",
         filters: %{session_id: "session-9"},
         limit: 5
       )
@@ -205,6 +210,7 @@ defmodule Honchox.PeersTest do
     # Act
     result =
       Honchox.Peers.representation(client, "alice",
+        workspace_id: "workspace-1",
         include_most_frequent: true,
         max_conclusions: 12,
         search_max_distance: 0.4,
@@ -245,6 +251,7 @@ defmodule Honchox.PeersTest do
     # Act
     result =
       Honchox.Peers.context(client, "alice",
+        workspace_id: "workspace-1",
         include_most_frequent: true,
         max_conclusions: 20,
         search_query: "preferences",
@@ -273,7 +280,7 @@ defmodule Honchox.PeersTest do
     client = client()
 
     # Act
-    result = Honchox.Peers.get_card(client, "alice", target: "bob")
+    result = Honchox.Peers.get_card(client, "alice", workspace_id: "workspace-1", target: "bob")
 
     # Assert
     assert {:ok, %{"peer_card" => ["Likes Python", "Works remotely"]}} = result
@@ -294,7 +301,10 @@ defmodule Honchox.PeersTest do
 
     # Act
     result =
-      Honchox.Peers.set_card(client, "alice", ["Works at Acme", "Enjoys hiking"], target: "bob")
+      Honchox.Peers.set_card(client, "alice", ["Works at Acme", "Enjoys hiking"],
+        workspace_id: "workspace-1",
+        target: "bob"
+      )
 
     # Assert
     assert {:ok, %{"peer_card" => ["Works at Acme", "Enjoys hiking"]}} = result
@@ -303,7 +313,6 @@ defmodule Honchox.PeersTest do
   defp client do
     Honchox.new(
       api_key: "secret",
-      workspace_id: "workspace-1",
       base_url: "https://api.honcho.dev",
       plug: {Req.Test, HonchoxPeersStub}
     )

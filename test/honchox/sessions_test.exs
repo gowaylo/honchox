@@ -22,6 +22,7 @@ defmodule Honchox.SessionsTest do
 
     assert {:ok, %{"id" => "session-1"}} =
              Honchox.Sessions.get_or_create(client(), "session-1",
+               workspace_id: "workspace-1",
                metadata: %{topic: "launch"},
                configuration: %{type: "meeting"}
              )
@@ -44,6 +45,7 @@ defmodule Honchox.SessionsTest do
 
     assert {:ok, %{"id" => "session-1"}} =
              Honchox.Sessions.update(client(), "session-1",
+               workspace_id: "workspace-1",
                metadata: %{topic: "review"},
                configuration: %{mode: "focus"}
              )
@@ -56,7 +58,7 @@ defmodule Honchox.SessionsTest do
       Plug.Conn.send_resp(conn, 202, "")
     end)
 
-    assert {:ok, ""} = Honchox.Sessions.delete(client(), "session-1")
+    assert {:ok, ""} = Honchox.Sessions.delete(client(), "session-1", workspace_id: "workspace-1")
   end
 
   test "clone/3 posts clone options to the clone endpoint" do
@@ -69,7 +71,10 @@ defmodule Honchox.SessionsTest do
     end)
 
     assert {:ok, %{"id" => "session-2"}} =
-             Honchox.Sessions.clone(client(), "session-1", message_id: "msg-9")
+             Honchox.Sessions.clone(client(), "session-1",
+               workspace_id: "workspace-1",
+               message_id: "msg-9"
+             )
   end
 
   test "context/3 encodes session context options as query params" do
@@ -95,6 +100,7 @@ defmodule Honchox.SessionsTest do
 
     assert {:ok, %{"id" => "session-1"}} =
              Honchox.Sessions.context(client(), "session-1",
+               workspace_id: "workspace-1",
                summary: true,
                tokens: 2000,
                peer_target: "user",
@@ -116,7 +122,8 @@ defmodule Honchox.SessionsTest do
       Req.Test.json(conn, %{"id" => "session-1", "short_summary" => %{"content" => "..."}})
     end)
 
-    assert {:ok, %{"id" => "session-1"}} = Honchox.Sessions.summaries(client(), "session-1")
+    assert {:ok, %{"id" => "session-1"}} =
+             Honchox.Sessions.summaries(client(), "session-1", workspace_id: "workspace-1")
   end
 
   test "search/4 posts a query with filters and limit" do
@@ -135,6 +142,7 @@ defmodule Honchox.SessionsTest do
 
     assert {:ok, %{"items" => [%{"id" => "msg-1"}]}} =
              Honchox.Sessions.search(client(), "session-1", "launch",
+               workspace_id: "workspace-1",
                filters: %{peer_id: "alice"},
                limit: 5
              )
@@ -153,7 +161,10 @@ defmodule Honchox.SessionsTest do
     end)
 
     peers = [%{peer_id: "alice"}, %{peer_id: "assistant"}]
-    assert {:ok, %{"items" => [_ | _]}} = Honchox.Sessions.add_peers(client(), "session-1", peers)
+    assert {:ok, %{"items" => [_ | _]}} =
+             Honchox.Sessions.add_peers(client(), "session-1", peers,
+               workspace_id: "workspace-1"
+             )
   end
 
   test "set_peers/3 replaces session peers" do
@@ -166,7 +177,9 @@ defmodule Honchox.SessionsTest do
     end)
 
     assert {:ok, %{"items" => [%{"peer_id" => "alice"}]}} =
-             Honchox.Sessions.set_peers(client(), "session-1", [%{peer_id: "alice"}])
+             Honchox.Sessions.set_peers(client(), "session-1", [%{peer_id: "alice"}],
+               workspace_id: "workspace-1"
+             )
   end
 
   test "remove_peers/3 deletes peers from the session" do
@@ -179,7 +192,9 @@ defmodule Honchox.SessionsTest do
     end)
 
     assert {:ok, nil} =
-             Honchox.Sessions.remove_peers(client(), "session-1", ["alice", "assistant"])
+             Honchox.Sessions.remove_peers(client(), "session-1", ["alice", "assistant"],
+               workspace_id: "workspace-1"
+             )
   end
 
   test "list_peers/2 gets peers for a session" do
@@ -191,7 +206,7 @@ defmodule Honchox.SessionsTest do
     end)
 
     assert {:ok, %{"items" => [%{"peer_id" => "alice"}]}} =
-             Honchox.Sessions.list_peers(client(), "session-1")
+             Honchox.Sessions.list_peers(client(), "session-1", workspace_id: "workspace-1")
   end
 
   test "get_peer_config/3 gets session-level peer configuration" do
@@ -205,7 +220,9 @@ defmodule Honchox.SessionsTest do
     end)
 
     assert {:ok, %{"observe_me" => true}} =
-             Honchox.Sessions.get_peer_config(client(), "session-1", "alice")
+             Honchox.Sessions.get_peer_config(client(), "session-1", "alice",
+               workspace_id: "workspace-1"
+             )
   end
 
   test "set_peer_config/4 updates session-level peer configuration" do
@@ -221,9 +238,12 @@ defmodule Honchox.SessionsTest do
     end)
 
     assert {:ok, %{"observe_me" => false}} =
-             Honchox.Sessions.set_peer_config(client(), "session-1", "alice",
-               observe_me: false,
-               observe_others: true
+             Honchox.Sessions.set_peer_config(
+               client(),
+               "session-1",
+               "alice",
+               %{observe_me: false, observe_others: true},
+               workspace_id: "workspace-1"
              )
   end
 
@@ -245,7 +265,9 @@ defmodule Honchox.SessionsTest do
     messages = [%{peer_id: "alice", content: "hello"}, %{peer_id: "assistant", content: "hi"}]
 
     assert {:ok, [%{"id" => "msg-1"}, %{"id" => "msg-2"}]} =
-             Honchox.Sessions.add_messages(client(), "session-1", messages)
+             Honchox.Sessions.add_messages(client(), "session-1", messages,
+               workspace_id: "workspace-1"
+             )
   end
 
   test "list_messages/3 posts list filters with pagination" do
@@ -266,6 +288,7 @@ defmodule Honchox.SessionsTest do
 
     assert {:ok, %{"page" => 2}} =
              Honchox.Sessions.list_messages(client(), "session-1",
+               workspace_id: "workspace-1",
                page: 2,
                size: 25,
                reverse: true,
@@ -282,7 +305,9 @@ defmodule Honchox.SessionsTest do
     end)
 
     assert {:ok, %{"id" => "msg-1"}} =
-             Honchox.Sessions.get_message(client(), "session-1", "msg-1")
+             Honchox.Sessions.get_message(client(), "session-1", "msg-1",
+               workspace_id: "workspace-1"
+             )
   end
 
   test "update_message/4 updates a message payload" do
@@ -295,9 +320,12 @@ defmodule Honchox.SessionsTest do
     end)
 
     assert {:ok, %{"content" => "updated"}} =
-             Honchox.Sessions.update_message(client(), "session-1", "msg-1",
-               content: "updated",
-               metadata: %{source: "edit"}
+             Honchox.Sessions.update_message(
+               client(),
+               "session-1",
+               "msg-1",
+               %{content: "updated", metadata: %{source: "edit"}},
+               workspace_id: "workspace-1"
              )
   end
 
@@ -316,6 +344,7 @@ defmodule Honchox.SessionsTest do
 
     assert {:ok, [%{"id" => "msg-upload-1"}]} =
              Honchox.Sessions.upload_file(client(), "session-1", {"notes.txt", "hello world"},
+               workspace_id: "workspace-1",
                peer: "alice",
                metadata: %{source: "upload"},
                created_at: "2024-01-15T10:30:00Z"
@@ -337,6 +366,7 @@ defmodule Honchox.SessionsTest do
 
     assert {:ok, %{"total_work_units" => 2}} =
              Honchox.Sessions.queue_status(client(), "session-1",
+               workspace_id: "workspace-1",
                observer_id: "assistant",
                sender_id: "alice"
              )
@@ -361,6 +391,7 @@ defmodule Honchox.SessionsTest do
 
     assert {:ok, %{"representation" => "Prefers concise answers."}} =
              Honchox.Sessions.representation(client(), "session-1", "alice",
+               workspace_id: "workspace-1",
                target: "assistant",
                search_query: "preferences",
                search_top_k: 5,
@@ -372,7 +403,6 @@ defmodule Honchox.SessionsTest do
   defp client do
     Honchox.new(
       api_key: "secret",
-      workspace_id: "workspace-1",
       base_url: "https://api.honcho.dev",
       plug: {Req.Test, HonchoxSessionsStub}
     )

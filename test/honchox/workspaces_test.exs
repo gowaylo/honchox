@@ -97,6 +97,27 @@ defmodule Honchox.WorkspacesTest do
              Honchox.Workspaces.list(client, %{page: 3, size: 25, filters: %{status: "draft"}})
   end
 
+  test "list/2 works without workspace_id configured on the client" do
+    Req.Test.stub(HonchoxWorkspacesStub, fn conn ->
+      assert conn.method == "POST"
+      assert conn.request_path == "/v3/workspaces/list"
+      assert URI.decode_query(conn.query_string) == %{"page" => "1", "size" => "5"}
+      assert conn.body_params == %{"filters" => %{}}
+
+      Req.Test.json(conn, %{"items" => [%{"id" => "shared"}], "page" => 1, "size" => 5, "total" => 1, "pages" => 1})
+    end)
+
+    client =
+      Honchox.new(
+        api_key: "secret",
+        base_url: "https://api.honcho.dev",
+        plug: {Req.Test, HonchoxWorkspacesStub}
+      )
+
+    assert {:ok, %{"items" => [%{"id" => "shared"}]}} =
+             Honchox.Workspaces.list(client, page: 1, size: 5)
+  end
+
   test "search/3 scopes the query to the current workspace and sends filters" do
     Req.Test.stub(HonchoxWorkspacesStub, fn conn ->
       assert conn.method == "POST"
@@ -115,6 +136,7 @@ defmodule Honchox.WorkspacesTest do
 
     assert {:ok, [%{"id" => "msg-1"}]} =
              Honchox.Workspaces.search(client, "budget planning",
+               workspace_id: "workspace-1",
                filters: %{metadata: %{team: "alpha"}},
                limit: 5
              )
@@ -144,6 +166,7 @@ defmodule Honchox.WorkspacesTest do
 
     assert {:ok, %{"total_work_units" => 1}} =
              Honchox.Workspaces.queue_status(client,
+               workspace_id: "workspace-1",
                observer_id: "obs-1",
                sender_id: "peer-1",
                session_id: "session-1"
@@ -169,6 +192,7 @@ defmodule Honchox.WorkspacesTest do
 
     assert {:ok, _body} =
              Honchox.Workspaces.schedule_dream(client,
+               workspace_id: "workspace-1",
                dream_type: "omni",
                observed: "peer-2",
                observer: "peer-1",
@@ -179,7 +203,6 @@ defmodule Honchox.WorkspacesTest do
   defp client do
     Honchox.new(
       api_key: "secret",
-      workspace_id: "workspace-1",
       base_url: "https://api.honcho.dev",
       plug: {Req.Test, HonchoxWorkspacesStub}
     )

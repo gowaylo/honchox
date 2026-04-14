@@ -1,0 +1,272 @@
+# Honchox Cheatsheet
+
+## Client Setup
+
+### Create a client
+
+```elixir
+# From environment variable
+client = Honchox.new()
+
+# Explicit configuration
+client = Honchox.new(
+  api_key: "sk-...",
+  base_url: "https://api.honcho.dev",
+  timeout: 30_000,
+  max_retries: 3
+)
+```
+
+## Workspaces
+
+### Create or get
+
+```elixir
+{:ok, ws} = Honchox.Workspaces.get_or_create(client, "my-workspace",
+  metadata: %{team: "alpha"}
+)
+```
+
+### Search
+
+```elixir
+{:ok, results} = Honchox.Workspaces.search(client, "search query",
+  workspace_id: "my-workspace",
+  limit: 10
+)
+```
+
+### List
+
+```elixir
+{:ok, page} = Honchox.Workspaces.list(client, page: 1, size: 20)
+```
+
+### Queue status
+
+```elixir
+{:ok, status} = Honchox.Workspaces.queue_status(client,
+  workspace_id: "my-workspace"
+)
+```
+
+### Schedule dream
+
+```elixir
+{:ok, _} = Honchox.Workspaces.schedule_dream(client,
+  workspace_id: "my-workspace",
+  dream_type: "omni"
+)
+```
+
+## Peers
+
+### Create or get
+
+```elixir
+{:ok, peer} = Honchox.Peers.get_or_create(client, "alice",
+  workspace_id: "my-workspace",
+  metadata: %{role: "user"}
+)
+```
+
+### Chat
+
+```elixir
+{:ok, resp} = Honchox.Peers.chat(client, "alice", "Hello!",
+  workspace_id: "my-workspace"
+)
+```
+
+### Context & representation
+
+```elixir
+{:ok, ctx} = Honchox.Peers.context(client, "alice",
+  workspace_id: "my-workspace",
+  search_query: "preferences"
+)
+
+{:ok, repr} = Honchox.Peers.representation(client, "alice",
+  workspace_id: "my-workspace"
+)
+```
+
+### Cards
+
+```elixir
+# Get card
+{:ok, card} = Honchox.Peers.get_card(client, "alice",
+  workspace_id: "my-workspace",
+  target: "bot"
+)
+
+# Set card
+{:ok, _} = Honchox.Peers.set_card(client, "alice", "Alice is a power user",
+  workspace_id: "my-workspace",
+  target: "bot"
+)
+```
+
+### List & search
+
+```elixir
+{:ok, peers} = Honchox.Peers.list(client,
+  workspace_id: "my-workspace",
+  page: 1, size: 50
+)
+
+{:ok, results} = Honchox.Peers.search(client, "alice", "topic query",
+  workspace_id: "my-workspace"
+)
+
+{:ok, sessions} = Honchox.Peers.list_sessions(client, "alice",
+  workspace_id: "my-workspace"
+)
+```
+
+## Sessions
+
+### Create or get
+
+```elixir
+{:ok, session} = Honchox.Sessions.get_or_create(client, "session-1",
+  workspace_id: "my-workspace",
+  metadata: %{topic: "onboarding"}
+)
+```
+
+### Messages
+
+```elixir
+# Add messages
+{:ok, _} = Honchox.Sessions.add_messages(client, "session-1", [
+  %{peer_id: "alice", content: "Hello!"},
+  %{peer_id: "bot", content: "Hi!"}
+], workspace_id: "my-workspace")
+
+# List messages
+{:ok, page} = Honchox.Sessions.list_messages(client, "session-1",
+  workspace_id: "my-workspace",
+  page: 1, size: 50, reverse: true
+)
+
+# Get single message
+{:ok, msg} = Honchox.Sessions.get_message(client, "session-1", "msg-id",
+  workspace_id: "my-workspace"
+)
+```
+
+### Peer membership
+
+```elixir
+# Add peers to session
+{:ok, _} = Honchox.Sessions.add_peers(client, "session-1",
+  [%{id: "alice"}, %{id: "bob"}],
+  workspace_id: "my-workspace"
+)
+
+# List session peers
+{:ok, peers} = Honchox.Sessions.list_peers(client, "session-1",
+  workspace_id: "my-workspace"
+)
+
+# Remove peers
+{:ok, _} = Honchox.Sessions.remove_peers(client, "session-1",
+  ["bob"],
+  workspace_id: "my-workspace"
+)
+```
+
+### Context & search
+
+```elixir
+{:ok, ctx} = Honchox.Sessions.context(client, "session-1",
+  workspace_id: "my-workspace",
+  search_query: "preferences",
+  search_top_k: 5
+)
+
+{:ok, results} = Honchox.Sessions.search(client, "session-1", "query",
+  workspace_id: "my-workspace"
+)
+```
+
+### File upload
+
+```elixir
+{:ok, _} = Honchox.Sessions.upload_file(client, "session-1",
+  {"report.pdf", File.read!("report.pdf")},
+  workspace_id: "my-workspace",
+  peer: "alice"
+)
+```
+
+### Clone & delete
+
+```elixir
+{:ok, cloned} = Honchox.Sessions.clone(client, "session-1",
+  workspace_id: "my-workspace"
+)
+
+{:ok, _} = Honchox.Sessions.delete(client, "session-1",
+  workspace_id: "my-workspace"
+)
+```
+
+## Conclusions
+
+### Create
+
+```elixir
+{:ok, _} = Honchox.Conclusions.create(client, [
+  %{content: "Prefers concise answers", observer_id: "bot", observed_id: "alice"}
+], workspace_id: "my-workspace")
+```
+
+### Semantic search
+
+```elixir
+{:ok, results} = Honchox.Conclusions.query(client, "communication style",
+  workspace_id: "my-workspace",
+  top_k: 10,
+  distance: 0.5
+)
+```
+
+### List & delete
+
+```elixir
+{:ok, page} = Honchox.Conclusions.list(client,
+  workspace_id: "my-workspace",
+  page: 1, size: 50
+)
+
+{:ok, _} = Honchox.Conclusions.delete(client, "conclusion-id",
+  workspace_id: "my-workspace"
+)
+```
+
+### Representation
+
+```elixir
+{:ok, repr} = Honchox.Conclusions.representation(client,
+  workspace_id: "my-workspace",
+  observer_id: "bot",
+  observed_id: "alice"
+)
+```
+
+## Error Handling
+
+### Pattern matching on errors
+
+```elixir
+case Honchox.Peers.get_or_create(client, "alice", workspace_id: "ws") do
+  {:ok, peer} -> peer
+  {:error, %Honchox.Error{kind: :http_error, status: 401}} -> raise "bad key"
+  {:error, %Honchox.Error{kind: :http_error, status: 404}} -> nil
+  {:error, %Honchox.Error{kind: :timeout}} -> retry()
+  {:error, %Honchox.Error{kind: :transport}} -> check_network()
+  {:error, error} -> raise error
+end
+```

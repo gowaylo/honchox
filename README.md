@@ -1,56 +1,17 @@
 # Honchox
 
-Honchox is a Req-based Elixir client for the Honcho API.
+[![Hex.pm](https://img.shields.io/hexpm/v/honchox.svg)](https://hex.pm/packages/honchox)
+[![Docs](https://img.shields.io/badge/hex-docs-blue.svg)](https://hexdocs.pm/honchox)
 
-The public entrypoint is `Honchox.new/1`, which returns a `%Honchox{}`
-client struct with the workspace id and request defaults attached. Resource
-modules will build on that client shape.
+Req-based Elixir client for the [Honcho](https://honcho.dev) v3 API.
 
-The client targets the Honcho v3 API under `/v3/...`.
-
-## Quickstart
-
-```elixir
-client =
-  Honchox.new(
-    api_key: System.fetch_env!("HONCHO_API_KEY"),
-    workspace_id: System.fetch_env!("HONCHO_WORKSPACE_ID"),
-    base_url: System.get_env("HONCHO_URL", "https://api.honcho.dev")
-  )
-
-{:ok, peer} =
-  Honchox.Peers.get_or_create(client, "alice",
-    metadata: %{role: "user"}
-  )
-
-{:ok, session} =
-  Honchox.Sessions.get_or_create(client, "session-1",
-    metadata: %{topic: "launch"}
-  )
-
-{:ok, messages} =
-  Honchox.Sessions.add_messages(client, "session-1", [
-    %{peer_id: "alice", content: "hello"}
-  ])
-
-{:ok, results} =
-  Honchox.Workspaces.search(client, "launch planning",
-    limit: 5
-  )
-```
-
-## Modules
-
-- `Honchox.Workspaces` wraps workspace-scoped endpoints such as workspace lookup, search, queue status, and dream scheduling.
-- `Honchox.Peers` wraps peer lifecycle, peer chat, peer context, representation, and peer card endpoints.
-- `Honchox.Sessions` wraps session lifecycle, peer membership, message ingestion, context, search, and file uploads.
-- `Honchox.Conclusions` wraps conclusion list/query/create/delete flows.
-- `Honchox.Observations` provides backward-compatible wrappers over the renamed conclusion endpoints.
+Honchox wraps [Req](https://hexdocs.pm/req) with built-in authentication,
+transient retry logic, and structured error handling to provide a clean
+interface to the Honcho API.
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `honchox` to your list of dependencies in `mix.exs`:
+Add `honchox` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
@@ -60,6 +21,99 @@ def deps do
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/honchox>.
+## Quick start
+
+```elixir
+# Create a client (reads HONCHO_API_KEY from env)
+client = Honchox.new()
+
+# Create a peer in a workspace
+{:ok, peer} = Honchox.Peers.get_or_create(client, "alice",
+  workspace_id: "my-workspace",
+  metadata: %{role: "user"}
+)
+
+# Start a session
+{:ok, session} = Honchox.Sessions.get_or_create(client, "session-1",
+  workspace_id: "my-workspace",
+  metadata: %{topic: "onboarding"}
+)
+
+# Add messages
+{:ok, _msgs} = Honchox.Sessions.add_messages(client, "session-1", [
+  %{peer_id: "alice", content: "Hello!"},
+  %{peer_id: "bot", content: "Hi Alice, how can I help?"}
+], workspace_id: "my-workspace")
+
+# Search across the workspace
+{:ok, results} = Honchox.Workspaces.search(client, "onboarding",
+  workspace_id: "my-workspace",
+  limit: 5
+)
+```
+
+## Modules
+
+| Module | Description |
+|--------|-------------|
+| `Honchox` | Client initialization and low-level HTTP methods |
+| `Honchox.Workspaces` | Workspace lifecycle, search, queue status, dream scheduling |
+| `Honchox.Peers` | Peer lifecycle, chat, context, representation, cards |
+| `Honchox.Sessions` | Session lifecycle, messages, peer membership, context, files |
+| `Honchox.Conclusions` | Conclusion CRUD and semantic search |
+| `Honchox.Observations` | *(deprecated)* Backward-compatible aliases for conclusions |
+| `Honchox.Error` | Structured error with kind, status, and body |
+
+## Configuration
+
+| Option         | Env var          | Default                  |
+|----------------|------------------|--------------------------|
+| `:api_key`     | `HONCHO_API_KEY` | *(required)*             |
+| `:base_url`    | `HONCHO_URL`     | `https://api.honcho.ai`  |
+| `:timeout`     | —                | `60_000` ms              |
+| `:max_retries` | —                | `2`                      |
+
+```elixir
+client = Honchox.new(
+  api_key: "sk-...",
+  base_url: "https://api.honcho.dev",
+  timeout: 30_000,
+  max_retries: 3
+)
+```
+
+## Error handling
+
+All functions return `{:ok, result}` or `{:error, %Honchox.Error{}}`.
+Pattern match on the error `:kind` for granular handling:
+
+```elixir
+case Honchox.Peers.get_or_create(client, "alice", workspace_id: "ws") do
+  {:ok, peer} ->
+    peer
+
+  {:error, %Honchox.Error{kind: :http_error, status: status}} ->
+    Logger.error("HTTP #{status}")
+
+  {:error, %Honchox.Error{kind: :timeout}} ->
+    Logger.warning("Request timed out, retrying...")
+
+  {:error, %Honchox.Error{kind: :transport, message: msg}} ->
+    Logger.error("Network error: #{msg}")
+end
+```
+
+## Documentation
+
+Full documentation is available on [HexDocs](https://hexdocs.pm/honchox).
+
+To generate docs locally:
+
+```bash
+mix docs
+open doc/index.html
+```
+
+## License
+
+MIT

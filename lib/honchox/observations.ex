@@ -11,7 +11,7 @@ defmodule Honchox.Observations do
     Honchox.Conclusions.query(client, query, opts)
   end
 
-  def delete(%Honchox{} = client, observation_id) do
-    Honchox.Conclusions.delete(client, observation_id)
+  def delete(%Honchox{} = client, observation_id, opts \\ []) do
+    Honchox.Conclusions.delete(client, observation_id, opts)
   end
 end

@@ -31,6 +31,8 @@ defmodule Honchox.Workspaces do
   end
 
   def search(%Honchox{} = client, query, opts \\ []) do
+    {workspace_id, opts} = workspace_scoped_map!(opts)
+
     body =
       opts
       |> normalize_map()
@@ -38,26 +40,50 @@ defmodule Honchox.Workspaces do
       |> Map.put_new(:filters, %{})
       |> Map.put_new(:limit, 10)
 
-    Honchox.post(client, "#{@base_path}/#{client.workspace_id}/search", body)
+    Honchox.post(client, "#{@base_path}/#{workspace_id}/search", body)
   end
 
   def queue_status(%Honchox{} = client, opts \\ []) do
-    opts = normalize_opts(opts)
+    {workspace_id, opts} = workspace_scoped_opts!(opts)
 
     Honchox.get(
       client,
-      "#{@base_path}/#{client.workspace_id}/queue/status",
+      "#{@base_path}/#{workspace_id}/queue/status",
       queue_status_params(opts)
     )
   end
 
   def schedule_dream(%Honchox{} = client, opts \\ []) do
+    {workspace_id, opts} = workspace_scoped_map!(opts)
+
     body =
       opts
       |> normalize_map()
       |> Map.put_new(:dream_type, "omni")
 
-    Honchox.post(client, "#{@base_path}/#{client.workspace_id}/schedule_dream", body)
+    Honchox.post(client, "#{@base_path}/#{workspace_id}/schedule_dream", body)
+  end
+
+  defp workspace_scoped_opts!(value) do
+    opts = normalize_opts(value)
+    workspace_id = get_opt(opts, :workspace_id) || get_opt(opts, "workspace_id")
+
+    if is_binary(workspace_id) do
+      {workspace_id, Map.drop(opts, [:workspace_id, "workspace_id"])}
+    else
+      raise ArgumentError, "missing required workspace_id option"
+    end
+  end
+
+  defp workspace_scoped_map!(value) do
+    value = normalize_map(value)
+    workspace_id = get_opt(value, :workspace_id) || get_opt(value, "workspace_id")
+
+    if is_binary(workspace_id) do
+      {workspace_id, Map.drop(value, [:workspace_id, "workspace_id"])}
+    else
+      raise ArgumentError, "missing required workspace_id option"
+    end
   end
 
   defp queue_status_params(opts) do

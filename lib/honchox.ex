@@ -4,9 +4,9 @@ defmodule Honchox do
 
   ## Examples
 
-      iex> client = Honchox.new(api_key: "secret", workspace_id: "workspace-1")
+      iex> client = Honchox.new(api_key: "secret")
       iex> client.workspace_id
-      "workspace-1"
+      nil
       iex> client.req.options[:auth]
       {:bearer, "secret"}
   """
@@ -19,10 +19,12 @@ defmodule Honchox do
 
   @doc """
   Builds a client with a preconfigured `Req` request.
+
+  The client carries authentication and transport defaults. Workspace-scoped
+  endpoints receive `workspace_id` in the function call that needs it.
   """
   def new(opts \\ []) when is_list(opts) do
     api_key = required_config_value!(opts, :api_key, "HONCHO_API_KEY")
-    workspace_id = required_config_value!(opts, :workspace_id, "HONCHO_WORKSPACE_ID")
     base_url = config_value(opts, :base_url, "HONCHO_URL", @default_base_url)
     timeout = Keyword.get(opts, :timeout, @default_timeout)
     max_retries = Keyword.get(opts, :max_retries, @default_max_retries)
@@ -39,7 +41,7 @@ defmodule Honchox do
     %__MODULE__{
       api_key: api_key,
       base_url: base_url,
-      workspace_id: workspace_id,
+      workspace_id: nil,
       timeout: timeout,
       max_retries: max_retries,
       req: Req.new(req_opts)

@@ -6,30 +6,38 @@ defmodule Honchox.Sessions do
   @base_path "/v3/workspaces"
 
   def get_or_create(%Honchox{} = client, session_id, attrs \\ []) do
+    {workspace_id, attrs} = workspace_scoped_map!(attrs)
+
     Honchox.post(
       client,
-      session_collection_path(client),
-      attrs |> normalize_map() |> Map.put(:id, session_id)
+      session_collection_path(workspace_id),
+      attrs |> Map.put(:id, session_id)
     )
   end
 
   def update(%Honchox{} = client, session_id, attrs \\ []) do
-    Honchox.put(client, session_path(client, session_id), normalize_map(attrs))
+    {workspace_id, attrs} = workspace_scoped_map!(attrs)
+    Honchox.put(client, session_path(workspace_id, session_id), attrs)
   end
 
-  def delete(%Honchox{} = client, session_id) do
-    Honchox.delete(client, session_path(client, session_id))
+  def delete(%Honchox{} = client, session_id, opts \\ []) do
+    {workspace_id, _opts} = workspace_scoped_opts!(opts)
+    Honchox.delete(client, session_path(workspace_id, session_id))
   end
 
   def clone(%Honchox{} = client, session_id, opts \\ []) do
+    {workspace_id, opts} =
+      opts
+      |> workspace_scoped_map!()
+
     opts
     |> normalize_map()
     |> drop_nil_values()
-    |> then(&Honchox.post(client, "#{session_path(client, session_id)}/clone", &1))
+    |> then(&Honchox.post(client, "#{session_path(workspace_id, session_id)}/clone", &1))
   end
 
   def context(%Honchox{} = client, session_id, opts \\ []) do
-    opts = normalize_opts(opts)
+    {workspace_id, opts} = workspace_scoped_opts!(opts)
 
     query =
       [
@@ -46,61 +54,72 @@ defmodule Honchox.Sessions do
       ]
       |> Enum.reject(fn {_key, value} -> is_nil(value) end)
 
-    Honchox.get(client, with_query("#{session_path(client, session_id)}/context", query))
+    Honchox.get(client, with_query("#{session_path(workspace_id, session_id)}/context", query))
   end
 
-  def summaries(%Honchox{} = client, session_id) do
-    Honchox.get(client, "#{session_path(client, session_id)}/summaries")
+  def summaries(%Honchox{} = client, session_id, opts \\ []) do
+    {workspace_id, _opts} = workspace_scoped_opts!(opts)
+    Honchox.get(client, "#{session_path(workspace_id, session_id)}/summaries")
   end
 
   def search(%Honchox{} = client, session_id, query, opts \\ []) do
-    body =
+    {workspace_id, body} =
       opts
-      |> normalize_map()
+      |> workspace_scoped_map!()
+
+    body =
+      body
       |> Map.put(:query, query)
       |> Map.put_new(:filters, %{})
       |> Map.put_new(:limit, 10)
       |> drop_nil_values()
 
-    Honchox.post(client, "#{session_path(client, session_id)}/search", body)
+    Honchox.post(client, "#{session_path(workspace_id, session_id)}/search", body)
   end
 
-  def add_peers(%Honchox{} = client, session_id, peers) do
-    Honchox.post(client, "#{session_path(client, session_id)}/peers", %{peers: peers})
+  def add_peers(%Honchox{} = client, session_id, peers, opts \\ []) do
+    {workspace_id, _opts} = workspace_scoped_opts!(opts)
+    Honchox.post(client, "#{session_path(workspace_id, session_id)}/peers", %{peers: peers})
   end
 
-  def set_peers(%Honchox{} = client, session_id, peers) do
-    Honchox.put(client, "#{session_path(client, session_id)}/peers", %{peers: peers})
+  def set_peers(%Honchox{} = client, session_id, peers, opts \\ []) do
+    {workspace_id, _opts} = workspace_scoped_opts!(opts)
+    Honchox.put(client, "#{session_path(workspace_id, session_id)}/peers", %{peers: peers})
   end
 
-  def remove_peers(%Honchox{} = client, session_id, peer_ids) do
-    Honchox.delete(client, "#{session_path(client, session_id)}/peers",
+  def remove_peers(%Honchox{} = client, session_id, peer_ids, opts \\ []) do
+    {workspace_id, _opts} = workspace_scoped_opts!(opts)
+    Honchox.delete(client, "#{session_path(workspace_id, session_id)}/peers",
       peer_ids: Enum.join(peer_ids, ",")
     )
   end
 
-  def list_peers(%Honchox{} = client, session_id) do
-    Honchox.get(client, "#{session_path(client, session_id)}/peers")
+  def list_peers(%Honchox{} = client, session_id, opts \\ []) do
+    {workspace_id, _opts} = workspace_scoped_opts!(opts)
+    Honchox.get(client, "#{session_path(workspace_id, session_id)}/peers")
   end
 
-  def get_peer_config(%Honchox{} = client, session_id, peer_id) do
-    Honchox.get(client, "#{session_path(client, session_id)}/peers/#{peer_id}/config")
+  def get_peer_config(%Honchox{} = client, session_id, peer_id, opts \\ []) do
+    {workspace_id, _opts} = workspace_scoped_opts!(opts)
+    Honchox.get(client, "#{session_path(workspace_id, session_id)}/peers/#{peer_id}/config")
   end
 
-  def set_peer_config(%Honchox{} = client, session_id, peer_id, config) do
+  def set_peer_config(%Honchox{} = client, session_id, peer_id, config, opts \\ []) do
+    {workspace_id, _opts} = workspace_scoped_opts!(opts)
     Honchox.put(
       client,
-      "#{session_path(client, session_id)}/peers/#{peer_id}/config",
+      "#{session_path(workspace_id, session_id)}/peers/#{peer_id}/config",
       normalize_map(config)
     )
   end
 
-  def add_messages(%Honchox{} = client, session_id, messages) do
-    Honchox.post(client, "#{session_path(client, session_id)}/messages", %{messages: messages})
+  def add_messages(%Honchox{} = client, session_id, messages, opts \\ []) do
+    {workspace_id, _opts} = workspace_scoped_opts!(opts)
+    Honchox.post(client, "#{session_path(workspace_id, session_id)}/messages", %{messages: messages})
   end
 
   def list_messages(%Honchox{} = client, session_id, opts \\ []) do
-    opts = normalize_opts(opts)
+    {workspace_id, opts} = workspace_scoped_opts!(opts)
     page = opt(opts, :page) || 1
     size = opt(opts, :size) || 50
     reverse = opt(opts, :reverse)
@@ -110,24 +129,26 @@ defmodule Honchox.Sessions do
       [page: page, size: size, reverse: reverse]
       |> Enum.reject(fn {_key, value} -> is_nil(value) end)
 
-    path = with_query("#{session_path(client, session_id)}/messages/list", query)
+    path = with_query("#{session_path(workspace_id, session_id)}/messages/list", query)
     Honchox.post(client, path, %{filters: normalize_map(filters)})
   end
 
-  def get_message(%Honchox{} = client, session_id, message_id) do
-    Honchox.get(client, "#{session_path(client, session_id)}/messages/#{message_id}")
+  def get_message(%Honchox{} = client, session_id, message_id, opts \\ []) do
+    {workspace_id, _opts} = workspace_scoped_opts!(opts)
+    Honchox.get(client, "#{session_path(workspace_id, session_id)}/messages/#{message_id}")
   end
 
-  def update_message(%Honchox{} = client, session_id, message_id, attrs) do
+  def update_message(%Honchox{} = client, session_id, message_id, attrs, opts \\ []) do
+    {workspace_id, _opts} = workspace_scoped_opts!(opts)
     Honchox.put(
       client,
-      "#{session_path(client, session_id)}/messages/#{message_id}",
+      "#{session_path(workspace_id, session_id)}/messages/#{message_id}",
       normalize_map(attrs)
     )
   end
 
   def upload_file(%Honchox{} = client, session_id, {filename, content}, opts \\ []) do
-    opts = normalize_opts(opts)
+    {workspace_id, opts} = workspace_scoped_opts!(opts)
 
     fields =
       [
@@ -138,11 +159,11 @@ defmodule Honchox.Sessions do
       ]
       |> Enum.reject(fn {_key, value} -> is_nil(value) end)
 
-    Honchox.upload(client, "#{session_path(client, session_id)}/files", fields)
+    Honchox.upload(client, "#{session_path(workspace_id, session_id)}/files", fields)
   end
 
   def queue_status(%Honchox{} = client, session_id, opts \\ []) do
-    opts = normalize_opts(opts)
+    {workspace_id, opts} = workspace_scoped_opts!(opts)
 
     query =
       [
@@ -151,26 +172,25 @@ defmodule Honchox.Sessions do
       ]
       |> Enum.reject(fn {_key, value} -> is_nil(value) end)
 
-    Honchox.get(client, with_query("#{session_path(client, session_id)}/queue/status", query))
+    Honchox.get(client, with_query("#{session_path(workspace_id, session_id)}/queue/status", query))
   end
 
   def representation(%Honchox{} = client, session_id, peer_id, opts \\ []) do
-    body =
+    {workspace_id, body} =
       opts
-      |> normalize_map()
+      |> workspace_scoped_map!()
+
+    body =
+      body
       |> Map.put(:peer_id, peer_id)
       |> drop_nil_values()
 
-    Honchox.post(client, "#{session_path(client, session_id)}/representation", body)
+    Honchox.post(client, "#{session_path(workspace_id, session_id)}/representation", body)
   end
 
-  defp session_collection_path(%Honchox{workspace_id: workspace_id}) do
-    "#{@base_path}/#{workspace_id}/sessions"
-  end
+  defp session_collection_path(workspace_id), do: "#{@base_path}/#{workspace_id}/sessions"
 
-  defp session_path(%Honchox{} = client, session_id) do
-    "#{session_collection_path(client)}/#{session_id}"
-  end
+  defp session_path(workspace_id, session_id), do: "#{session_collection_path(workspace_id)}/#{session_id}"
 
   defp metadata_field(nil), do: nil
   defp metadata_field(value), do: Jason.encode!(value)
@@ -192,6 +212,28 @@ defmodule Honchox.Sessions do
   defp normalize_map(value) when is_map(value), do: Map.new(value)
   defp normalize_map(value) when is_list(value), do: Map.new(value)
   defp normalize_map(value), do: value
+
+  defp workspace_scoped_opts!(value) do
+    opts = normalize_opts(value)
+    workspace_id = opt(opts, :workspace_id)
+
+    if is_binary(workspace_id) do
+      {workspace_id, Map.drop(opts, [:workspace_id, "workspace_id"])}
+    else
+      raise ArgumentError, "missing required workspace_id option"
+    end
+  end
+
+  defp workspace_scoped_map!(value) do
+    value = normalize_map(value)
+    workspace_id = opt(value, :workspace_id)
+
+    if is_binary(workspace_id) do
+      {workspace_id, Map.drop(value, [:workspace_id, "workspace_id"])}
+    else
+      raise ArgumentError, "missing required workspace_id option"
+    end
+  end
 
   defp drop_nil_values(value) when is_map(value) do
     value

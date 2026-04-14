@@ -2,7 +2,7 @@ defmodule Honchox.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/go-waylo/honchox"
-  @version "0.2.0"
+  @version "0.2.1"
 
   def project do
     [
@@ -23,8 +23,7 @@ defmodule Honchox.MixProject do
 
   def application do
     [
-      extra_applications: [:logger],
-      mod: {Honchox.Application, []}
+      extra_applications: [:logger]
     ]
   end
 

@@ -57,17 +57,21 @@ defmodule Honchox.PeerWorkspaceQA do
   `:step` that failed (`:representation`, `:context`, `:workspace_search`,
   or `:chat`).
   """
-  @spec ask(Honchox.t(), String.t(), String.t(), keyword()) ::
+  @spec ask(Honchox.Client.t(), String.t(), String.t(), keyword()) ::
           {:ok, map()} | {:error, term()}
-  def ask(%Honchox{} = client, peer_id, question, opts \\ []) when is_binary(peer_id) and is_binary(question) do
+  def ask(%Honchox.Client{} = client, peer_id, question, opts \\ [])
+      when is_binary(peer_id) and is_binary(question) do
     workspace_id = Keyword.get(opts, :workspace_id, @workspace_id)
     limit = Keyword.get(opts, :limit, @default_limit)
     reasoning_level = Keyword.get(opts, :reasoning_level, @default_reasoning_level)
 
-    with {:representation, {:ok, representation}} <- {:representation, fetch_representation(client, peer_id, question, workspace_id)},
-         {:context, {:ok, context}} <- {:context, fetch_context(client, peer_id, question, workspace_id)},
+    with {:representation, {:ok, representation}} <-
+           {:representation, fetch_representation(client, peer_id, question, workspace_id)},
+         {:context, {:ok, context}} <-
+           {:context, fetch_context(client, peer_id, question, workspace_id)},
          {:workspace_search, {:ok, workspace_results}} <-
-           {:workspace_search, fetch_workspace_results(client, peer_id, question, workspace_id, limit)},
+           {:workspace_search,
+            fetch_workspace_results(client, peer_id, question, workspace_id, limit)},
          prompt = build_prompt(peer_id, question, representation, context, workspace_results),
          {:chat, {:ok, response}} <-
            {:chat,
@@ -78,7 +82,15 @@ defmodule Honchox.PeerWorkspaceQA do
               workspace_id: workspace_id,
               reasoning_level: reasoning_level
             )} do
-      {:ok, success_response(peer_id, workspace_id, representation, context, workspace_results, response)}
+      {:ok,
+       success_response(
+         peer_id,
+         workspace_id,
+         representation,
+         context,
+         workspace_results,
+         response
+       )}
     else
       {:representation, {:error, error}} -> {:error, annotate_error(:representation, error)}
       {:context, {:error, error}} -> {:error, annotate_error(:context, error)}
@@ -87,7 +99,14 @@ defmodule Honchox.PeerWorkspaceQA do
     end
   end
 
-  defp success_response(peer_id, workspace_id, representation, context, workspace_results, response) do
+  defp success_response(
+         peer_id,
+         workspace_id,
+         representation,
+         context,
+         workspace_results,
+         response
+       ) do
     %{
       "content" => Map.get(response, "content"),
       "peer_id" => peer_id,

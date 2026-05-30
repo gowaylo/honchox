@@ -85,7 +85,13 @@ defmodule Honchox.PeersTest do
     client = client()
 
     # Act
-    result = Honchox.Peers.list(client, workspace_id: "workspace-1", page: 2, size: 10, filters: %{role: "user"})
+    result =
+      Honchox.Peers.list(client,
+        workspace_id: "workspace-1",
+        page: 2,
+        size: 10,
+        filters: %{role: "user"}
+      )
 
     # Assert
     assert {:ok, %{"page" => 2, "items" => [%{"id" => "alice"}]}} = result

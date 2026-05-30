@@ -18,8 +18,8 @@ defmodule Honchox.Observations do
   Delegates to `Honchox.Conclusions.list/2`. See that function for options.
   """
   @doc deprecated: "Use Honchox.Conclusions.list/2 instead"
-  @spec list(Honchox.t(), keyword() | map()) :: {:ok, map()} | {:error, Honchox.Error.t()}
-  def list(%Honchox{} = client, opts \\ []) do
+  @spec list(Honchox.Client.t(), keyword() | map()) :: {:ok, map()} | {:error, Honchox.Error.t()}
+  def list(%Honchox.Client{} = client, opts \\ []) do
     Honchox.Conclusions.list(client, opts)
   end
 
@@ -29,9 +29,9 @@ defmodule Honchox.Observations do
   Delegates to `Honchox.Conclusions.query/3`. See that function for options.
   """
   @doc deprecated: "Use Honchox.Conclusions.query/3 instead"
-  @spec query(Honchox.t(), String.t(), keyword() | map()) ::
+  @spec query(Honchox.Client.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def query(%Honchox{} = client, query, opts \\ []) do
+  def query(%Honchox.Client{} = client, query, opts \\ []) do
     Honchox.Conclusions.query(client, query, opts)
   end
 
@@ -41,9 +41,9 @@ defmodule Honchox.Observations do
   Delegates to `Honchox.Conclusions.delete/3`. See that function for options.
   """
   @doc deprecated: "Use Honchox.Conclusions.delete/3 instead"
-  @spec delete(Honchox.t(), String.t(), keyword() | map()) ::
+  @spec delete(Honchox.Client.t(), String.t(), keyword() | map()) ::
           {:ok, term()} | {:error, Honchox.Error.t()}
-  def delete(%Honchox{} = client, observation_id, opts \\ []) do
+  def delete(%Honchox.Client{} = client, observation_id, opts \\ []) do
     Honchox.Conclusions.delete(client, observation_id, opts)
   end
 end

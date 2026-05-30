@@ -41,9 +41,9 @@ defmodule Honchox.Peers do
     * `:metadata` — arbitrary metadata map
     * `:configuration` — peer configuration map
   """
-  @spec get_or_create(Honchox.t(), String.t(), keyword() | map()) ::
+  @spec get_or_create(Honchox.Client.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def get_or_create(%Honchox{} = client, peer_id, attrs \\ []) do
+  def get_or_create(%Honchox.Client{} = client, peer_id, attrs \\ []) do
     {workspace_id, attrs} = workspace_scoped_map!(attrs)
 
     client
@@ -62,9 +62,9 @@ defmodule Honchox.Peers do
     * `:metadata` — updated metadata map
     * `:configuration` — updated configuration map
   """
-  @spec update(Honchox.t(), String.t(), keyword() | map()) ::
+  @spec update(Honchox.Client.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def update(%Honchox{} = client, peer_id, attrs \\ []) do
+  def update(%Honchox.Client{} = client, peer_id, attrs \\ []) do
     {workspace_id, attrs} = workspace_scoped_map!(attrs)
 
     client
@@ -81,8 +81,8 @@ defmodule Honchox.Peers do
     * `:size` — page size (default: `50`)
     * `:filters` — map of filter criteria (default: `%{}`)
   """
-  @spec list(Honchox.t(), keyword() | map()) :: {:ok, map()} | {:error, Honchox.Error.t()}
-  def list(%Honchox{} = client, opts \\ []) do
+  @spec list(Honchox.Client.t(), keyword() | map()) :: {:ok, map()} | {:error, Honchox.Error.t()}
+  def list(%Honchox.Client{} = client, opts \\ []) do
     {workspace_id, opts} = workspace_scoped_opts!(opts)
     page = opt(opts, :page) || 1
     size = opt(opts, :size) || 50
@@ -103,9 +103,9 @@ defmodule Honchox.Peers do
     * `:size` — page size (default: `50`)
     * `:filters` — map of filter criteria (default: `%{}`)
   """
-  @spec list_sessions(Honchox.t(), String.t(), keyword() | map()) ::
+  @spec list_sessions(Honchox.Client.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def list_sessions(%Honchox{} = client, peer_id, opts \\ []) do
+  def list_sessions(%Honchox.Client{} = client, peer_id, opts \\ []) do
     {workspace_id, opts} = workspace_scoped_opts!(opts)
     page = opt(opts, :page) || 1
     size = opt(opts, :size) || 50
@@ -126,9 +126,9 @@ defmodule Honchox.Peers do
     * `:session_id` — session to scope the chat to
     * `:target` — target peer ID for directed chat
   """
-  @spec chat(Honchox.t(), String.t(), String.t(), keyword() | map()) ::
+  @spec chat(Honchox.Client.t(), String.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def chat(%Honchox{} = client, peer_id, query, opts \\ []) do
+  def chat(%Honchox.Client{} = client, peer_id, query, opts \\ []) do
     {workspace_id, body} =
       opts
       |> workspace_scoped_map!()
@@ -150,9 +150,9 @@ defmodule Honchox.Peers do
     * `:filters` — map of filter criteria (default: `%{}`)
     * `:limit` — max number of results (default: `10`)
   """
-  @spec search(Honchox.t(), String.t(), String.t(), keyword() | map()) ::
+  @spec search(Honchox.Client.t(), String.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def search(%Honchox{} = client, peer_id, query, opts \\ []) do
+  def search(%Honchox.Client{} = client, peer_id, query, opts \\ []) do
     {workspace_id, body} =
       opts
       |> workspace_scoped_map!()
@@ -181,14 +181,18 @@ defmodule Honchox.Peers do
     * `:max_conclusions` — cap on total conclusions in representation
     * `:target` — target peer ID
   """
-  @spec representation(Honchox.t(), String.t(), keyword() | map()) ::
+  @spec representation(Honchox.Client.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def representation(%Honchox{} = client, peer_id, opts \\ []) do
+  def representation(%Honchox.Client{} = client, peer_id, opts \\ []) do
     {workspace_id, body} =
       opts
       |> workspace_scoped_map!()
 
-    Honchox.post(client, "#{peer_path(workspace_id, peer_id)}/representation", drop_nil_values(body))
+    Honchox.post(
+      client,
+      "#{peer_path(workspace_id, peer_id)}/representation",
+      drop_nil_values(body)
+    )
   end
 
   @doc """
@@ -204,9 +208,9 @@ defmodule Honchox.Peers do
     * `:include_most_frequent` — include most frequently referenced conclusions
     * `:max_conclusions` — cap on total conclusions
   """
-  @spec context(Honchox.t(), String.t(), keyword() | map()) ::
+  @spec context(Honchox.Client.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def context(%Honchox{} = client, peer_id, opts \\ []) do
+  def context(%Honchox.Client{} = client, peer_id, opts \\ []) do
     {workspace_id, opts} = workspace_scoped_opts!(opts)
 
     query =
@@ -234,9 +238,9 @@ defmodule Honchox.Peers do
     * `:workspace_id` — (**required**)
     * `:target` — the observing peer's ID (whose perspective to use)
   """
-  @spec get_card(Honchox.t(), String.t(), keyword() | map()) ::
+  @spec get_card(Honchox.Client.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def get_card(%Honchox{} = client, peer_id, opts \\ []) do
+  def get_card(%Honchox.Client{} = client, peer_id, opts \\ []) do
     {workspace_id, opts} = workspace_scoped_opts!(opts)
 
     query =
@@ -258,9 +262,9 @@ defmodule Honchox.Peers do
     * `:workspace_id` — (**required**)
     * `:target` — the observing peer's ID (whose perspective to set)
   """
-  @spec set_card(Honchox.t(), String.t(), term(), keyword() | map()) ::
+  @spec set_card(Honchox.Client.t(), String.t(), term(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def set_card(%Honchox{} = client, peer_id, peer_card, opts \\ []) do
+  def set_card(%Honchox.Client{} = client, peer_id, peer_card, opts \\ []) do
     {workspace_id, opts} = workspace_scoped_opts!(opts)
 
     query =

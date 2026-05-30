@@ -90,7 +90,8 @@ defmodule Honchox.KeysTest do
       Req.Test.json(conn, %{"key" => "jwt-scoped"})
     end)
 
-    assert {:ok, %Honchox{} = client} = Honchox.Keys.create_client(client(), workspace_id: "ws-1")
+    assert {:ok, %Honchox.Client{} = client} =
+             Honchox.Keys.create_client(client(), workspace_id: "ws-1")
 
     assert client.jwt == "jwt-scoped"
     assert client.api_key == nil
@@ -113,7 +114,7 @@ defmodule Honchox.KeysTest do
         plug: {Req.Test, HonchoxKeysStub}
       )
 
-    assert {:ok, %Honchox{} = scoped_client} =
+    assert {:ok, %Honchox.Client{} = scoped_client} =
              Honchox.Keys.create_client(admin_client, workspace_id: "ws-1")
 
     assert scoped_client.base_url == admin_client.base_url

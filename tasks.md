@@ -7,7 +7,7 @@ Rule for every task run: update this index first/last and mark the relevant task
 ## Checklist
 
 - [x] [Task 01 — TypeScript SDK parity matrix](.tasks/01-typescript-sdk-parity-matrix.md)
-- [ ] [Task 02 — Stateless client and HTTP foundation](.tasks/02-stateless-client-http-foundation.md)
+- [x] [Task 02 — Stateless client and HTTP foundation](.tasks/02-stateless-client-http-foundation.md)
 - [ ] [Task 03 — Internal API modules matching TypeScript SDK](.tasks/03-internal-api-modules.md)
 - [ ] [Task 04 — Structs and API response conversion](.tasks/04-structs-and-conversion.md)
 - [ ] [Task 05 — Client entry points](.tasks/05-client-entry-points.md)

@@ -50,13 +50,14 @@ client = Honchox.new(
 
 ### Client options
 
-| Option         | Default                    | Description                              |
-|----------------|----------------------------|------------------------------------------|
-| `:api_key`     | `HONCHO_API_KEY` env var   | Admin API key (required unless `:jwt`)   |
-| `:jwt`         | *(none)*                   | Scoped JWT token (see [Scoped Keys](scoped-keys.html)) |
-| `:base_url`    | `https://api.honcho.ai`   | API base URL                             |
-| `:timeout`     | `60_000`                   | Receive timeout in ms                    |
-| `:max_retries` | `2`                        | Retries on transient failures            |
+| Option          | Default                                         | Description                                                                          |
+|-----------------|-------------------------------------------------|--------------------------------------------------------------------------------------|
+| `:api_key`      | `HONCHO_API_KEY` env var                        | Admin API key (required unless `:jwt`)                                               |
+| `:jwt`          | *(none)*                                        | Scoped JWT token (see [Scoped Keys](scoped-keys.html))                               |
+| `:base_url`     | `https://api.honcho.dev`                        | API base URL                                                                         |
+| `:workspace_id` | `HONCHO_WORKSPACE_ID` env var, then `"default"` | Stored on `%Honchox.Client{}`; resource calls still require `:workspace_id` today     |
+| `:timeout`      | `60_000`                                        | Receive timeout in ms                                                                |
+| `:max_retries`  | `2`                                             | Retries on transient failures                                                        |
 
 ## Core concepts
 

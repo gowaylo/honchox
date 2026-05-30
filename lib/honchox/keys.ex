@@ -55,8 +55,8 @@ defmodule Honchox.Keys do
       )
 
   """
-  @spec create(Honchox.t(), keyword()) :: {:ok, map()} | {:error, Honchox.Error.t()}
-  def create(%Honchox{} = client, opts \\ []) when is_list(opts) do
+  @spec create(Honchox.Client.t(), keyword()) :: {:ok, map()} | {:error, Honchox.Error.t()}
+  def create(%Honchox.Client{} = client, opts \\ []) when is_list(opts) do
     path = with_query(@base_path, query_params(opts))
 
     case Req.request(client.req, method: :post, url: path) do
@@ -86,8 +86,9 @@ defmodule Honchox.Keys do
         )
 
   """
-  @spec create_client(Honchox.t(), keyword()) :: {:ok, Honchox.t()} | {:error, Honchox.Error.t()}
-  def create_client(%Honchox{} = client, opts \\ []) when is_list(opts) do
+  @spec create_client(Honchox.Client.t(), keyword()) ::
+          {:ok, Honchox.Client.t()} | {:error, Honchox.Error.t()}
+  def create_client(%Honchox.Client{} = client, opts \\ []) when is_list(opts) do
     with {:ok, %{"key" => jwt}} <- create(client, opts) do
       {:ok,
        Honchox.new(

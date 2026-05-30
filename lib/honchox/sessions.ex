@@ -46,9 +46,9 @@ defmodule Honchox.Sessions do
     * `:metadata` — arbitrary metadata map
     * `:configuration` — session configuration map
   """
-  @spec get_or_create(Honchox.t(), String.t(), keyword() | map()) ::
+  @spec get_or_create(Honchox.Client.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def get_or_create(%Honchox{} = client, session_id, attrs \\ []) do
+  def get_or_create(%Honchox.Client{} = client, session_id, attrs \\ []) do
     {workspace_id, attrs} = workspace_scoped_map!(attrs)
 
     Honchox.post(
@@ -67,9 +67,9 @@ defmodule Honchox.Sessions do
     * `:metadata` — updated metadata map
     * `:configuration` — updated configuration map
   """
-  @spec update(Honchox.t(), String.t(), keyword() | map()) ::
+  @spec update(Honchox.Client.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def update(%Honchox{} = client, session_id, attrs \\ []) do
+  def update(%Honchox.Client{} = client, session_id, attrs \\ []) do
     {workspace_id, attrs} = workspace_scoped_map!(attrs)
     Honchox.put(client, session_path(workspace_id, session_id), attrs)
   end
@@ -81,9 +81,9 @@ defmodule Honchox.Sessions do
 
     * `:workspace_id` — (**required**)
   """
-  @spec delete(Honchox.t(), String.t(), keyword() | map()) ::
+  @spec delete(Honchox.Client.t(), String.t(), keyword() | map()) ::
           {:ok, term()} | {:error, Honchox.Error.t()}
-  def delete(%Honchox{} = client, session_id, opts \\ []) do
+  def delete(%Honchox.Client{} = client, session_id, opts \\ []) do
     {workspace_id, _opts} = workspace_scoped_opts!(opts)
     Honchox.delete(client, session_path(workspace_id, session_id))
   end
@@ -96,9 +96,9 @@ defmodule Honchox.Sessions do
     * `:workspace_id` — (**required**)
     * `:message_id` — clone from this message onward (optional)
   """
-  @spec clone(Honchox.t(), String.t(), keyword() | map()) ::
+  @spec clone(Honchox.Client.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def clone(%Honchox{} = client, session_id, opts \\ []) do
+  def clone(%Honchox.Client{} = client, session_id, opts \\ []) do
     {workspace_id, opts} =
       opts
       |> workspace_scoped_map!()
@@ -133,9 +133,9 @@ defmodule Honchox.Sessions do
     * `:include_most_frequent` — include most frequently referenced conclusions
     * `:max_conclusions` — cap on total conclusions
   """
-  @spec context(Honchox.t(), String.t(), keyword() | map()) ::
+  @spec context(Honchox.Client.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def context(%Honchox{} = client, session_id, opts \\ []) do
+  def context(%Honchox.Client{} = client, session_id, opts \\ []) do
     {workspace_id, opts} = workspace_scoped_opts!(opts)
 
     query =
@@ -163,9 +163,9 @@ defmodule Honchox.Sessions do
 
     * `:workspace_id` — (**required**)
   """
-  @spec summaries(Honchox.t(), String.t(), keyword() | map()) ::
+  @spec summaries(Honchox.Client.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def summaries(%Honchox{} = client, session_id, opts \\ []) do
+  def summaries(%Honchox.Client{} = client, session_id, opts \\ []) do
     {workspace_id, _opts} = workspace_scoped_opts!(opts)
     Honchox.get(client, "#{session_path(workspace_id, session_id)}/summaries")
   end
@@ -179,9 +179,9 @@ defmodule Honchox.Sessions do
     * `:filters` — map of filter criteria (default: `%{}`)
     * `:limit` — max number of results (default: `10`)
   """
-  @spec search(Honchox.t(), String.t(), String.t(), keyword() | map()) ::
+  @spec search(Honchox.Client.t(), String.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def search(%Honchox{} = client, session_id, query, opts \\ []) do
+  def search(%Honchox.Client{} = client, session_id, query, opts \\ []) do
     {workspace_id, body} =
       opts
       |> workspace_scoped_map!()
@@ -209,9 +209,9 @@ defmodule Honchox.Sessions do
 
     * `:workspace_id` — (**required**)
   """
-  @spec add_peers(Honchox.t(), String.t(), [map()], keyword() | map()) ::
+  @spec add_peers(Honchox.Client.t(), String.t(), [map()], keyword() | map()) ::
           {:ok, term()} | {:error, Honchox.Error.t()}
-  def add_peers(%Honchox{} = client, session_id, peers, opts \\ []) do
+  def add_peers(%Honchox.Client{} = client, session_id, peers, opts \\ []) do
     {workspace_id, _opts} = workspace_scoped_opts!(opts)
     Honchox.post(client, "#{session_path(workspace_id, session_id)}/peers", %{peers: peers})
   end
@@ -225,9 +225,9 @@ defmodule Honchox.Sessions do
 
     * `:workspace_id` — (**required**)
   """
-  @spec set_peers(Honchox.t(), String.t(), [map()], keyword() | map()) ::
+  @spec set_peers(Honchox.Client.t(), String.t(), [map()], keyword() | map()) ::
           {:ok, term()} | {:error, Honchox.Error.t()}
-  def set_peers(%Honchox{} = client, session_id, peers, opts \\ []) do
+  def set_peers(%Honchox.Client{} = client, session_id, peers, opts \\ []) do
     {workspace_id, _opts} = workspace_scoped_opts!(opts)
     Honchox.put(client, "#{session_path(workspace_id, session_id)}/peers", %{peers: peers})
   end
@@ -239,10 +239,11 @@ defmodule Honchox.Sessions do
 
     * `:workspace_id` — (**required**)
   """
-  @spec remove_peers(Honchox.t(), String.t(), [String.t()], keyword() | map()) ::
+  @spec remove_peers(Honchox.Client.t(), String.t(), [String.t()], keyword() | map()) ::
           {:ok, term()} | {:error, Honchox.Error.t()}
-  def remove_peers(%Honchox{} = client, session_id, peer_ids, opts \\ []) do
+  def remove_peers(%Honchox.Client{} = client, session_id, peer_ids, opts \\ []) do
     {workspace_id, _opts} = workspace_scoped_opts!(opts)
+
     Honchox.delete(client, "#{session_path(workspace_id, session_id)}/peers",
       peer_ids: Enum.join(peer_ids, ",")
     )
@@ -255,9 +256,9 @@ defmodule Honchox.Sessions do
 
     * `:workspace_id` — (**required**)
   """
-  @spec list_peers(Honchox.t(), String.t(), keyword() | map()) ::
+  @spec list_peers(Honchox.Client.t(), String.t(), keyword() | map()) ::
           {:ok, [map()]} | {:error, Honchox.Error.t()}
-  def list_peers(%Honchox{} = client, session_id, opts \\ []) do
+  def list_peers(%Honchox.Client{} = client, session_id, opts \\ []) do
     {workspace_id, _opts} = workspace_scoped_opts!(opts)
     Honchox.get(client, "#{session_path(workspace_id, session_id)}/peers")
   end
@@ -269,9 +270,9 @@ defmodule Honchox.Sessions do
 
     * `:workspace_id` — (**required**)
   """
-  @spec get_peer_config(Honchox.t(), String.t(), String.t(), keyword() | map()) ::
+  @spec get_peer_config(Honchox.Client.t(), String.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def get_peer_config(%Honchox{} = client, session_id, peer_id, opts \\ []) do
+  def get_peer_config(%Honchox.Client{} = client, session_id, peer_id, opts \\ []) do
     {workspace_id, _opts} = workspace_scoped_opts!(opts)
     Honchox.get(client, "#{session_path(workspace_id, session_id)}/peers/#{peer_id}/config")
   end
@@ -285,10 +286,17 @@ defmodule Honchox.Sessions do
 
     * `:workspace_id` — (**required**)
   """
-  @spec set_peer_config(Honchox.t(), String.t(), String.t(), map() | keyword(), keyword() | map()) ::
+  @spec set_peer_config(
+          Honchox.Client.t(),
+          String.t(),
+          String.t(),
+          map() | keyword(),
+          keyword() | map()
+        ) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def set_peer_config(%Honchox{} = client, session_id, peer_id, config, opts \\ []) do
+  def set_peer_config(%Honchox.Client{} = client, session_id, peer_id, config, opts \\ []) do
     {workspace_id, _opts} = workspace_scoped_opts!(opts)
+
     Honchox.put(
       client,
       "#{session_path(workspace_id, session_id)}/peers/#{peer_id}/config",
@@ -318,11 +326,14 @@ defmodule Honchox.Sessions do
       ], workspace_id: "my-workspace")
 
   """
-  @spec add_messages(Honchox.t(), String.t(), [map()], keyword() | map()) ::
+  @spec add_messages(Honchox.Client.t(), String.t(), [map()], keyword() | map()) ::
           {:ok, term()} | {:error, Honchox.Error.t()}
-  def add_messages(%Honchox{} = client, session_id, messages, opts \\ []) do
+  def add_messages(%Honchox.Client{} = client, session_id, messages, opts \\ []) do
     {workspace_id, _opts} = workspace_scoped_opts!(opts)
-    Honchox.post(client, "#{session_path(workspace_id, session_id)}/messages", %{messages: messages})
+
+    Honchox.post(client, "#{session_path(workspace_id, session_id)}/messages", %{
+      messages: messages
+    })
   end
 
   @doc """
@@ -336,9 +347,9 @@ defmodule Honchox.Sessions do
     * `:reverse` — reverse chronological order
     * `:filters` — map of filter criteria (default: `%{}`)
   """
-  @spec list_messages(Honchox.t(), String.t(), keyword() | map()) ::
+  @spec list_messages(Honchox.Client.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def list_messages(%Honchox{} = client, session_id, opts \\ []) do
+  def list_messages(%Honchox.Client{} = client, session_id, opts \\ []) do
     {workspace_id, opts} = workspace_scoped_opts!(opts)
     page = opt(opts, :page) || 1
     size = opt(opts, :size) || 50
@@ -360,9 +371,9 @@ defmodule Honchox.Sessions do
 
     * `:workspace_id` — (**required**)
   """
-  @spec get_message(Honchox.t(), String.t(), String.t(), keyword() | map()) ::
+  @spec get_message(Honchox.Client.t(), String.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def get_message(%Honchox{} = client, session_id, message_id, opts \\ []) do
+  def get_message(%Honchox.Client{} = client, session_id, message_id, opts \\ []) do
     {workspace_id, _opts} = workspace_scoped_opts!(opts)
     Honchox.get(client, "#{session_path(workspace_id, session_id)}/messages/#{message_id}")
   end
@@ -376,10 +387,17 @@ defmodule Honchox.Sessions do
 
     * `:workspace_id` — (**required**)
   """
-  @spec update_message(Honchox.t(), String.t(), String.t(), map() | keyword(), keyword() | map()) ::
+  @spec update_message(
+          Honchox.Client.t(),
+          String.t(),
+          String.t(),
+          map() | keyword(),
+          keyword() | map()
+        ) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def update_message(%Honchox{} = client, session_id, message_id, attrs, opts \\ []) do
+  def update_message(%Honchox.Client{} = client, session_id, message_id, attrs, opts \\ []) do
     {workspace_id, _opts} = workspace_scoped_opts!(opts)
+
     Honchox.put(
       client,
       "#{session_path(workspace_id, session_id)}/messages/#{message_id}",
@@ -404,9 +422,9 @@ defmodule Honchox.Sessions do
     * `:metadata` — metadata map (JSON-encoded automatically)
     * `:created_at` — custom creation timestamp
   """
-  @spec upload_file(Honchox.t(), String.t(), {String.t(), binary()}, keyword() | map()) ::
+  @spec upload_file(Honchox.Client.t(), String.t(), {String.t(), binary()}, keyword() | map()) ::
           {:ok, term()} | {:error, Honchox.Error.t()}
-  def upload_file(%Honchox{} = client, session_id, {filename, content}, opts \\ []) do
+  def upload_file(%Honchox.Client{} = client, session_id, {filename, content}, opts \\ []) do
     {workspace_id, opts} = workspace_scoped_opts!(opts)
 
     fields =
@@ -434,9 +452,9 @@ defmodule Honchox.Sessions do
     * `:observer_id` — filter by observer peer ID
     * `:sender_id` — filter by sender peer ID
   """
-  @spec queue_status(Honchox.t(), String.t(), keyword() | map()) ::
+  @spec queue_status(Honchox.Client.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def queue_status(%Honchox{} = client, session_id, opts \\ []) do
+  def queue_status(%Honchox.Client{} = client, session_id, opts \\ []) do
     {workspace_id, opts} = workspace_scoped_opts!(opts)
 
     query =
@@ -446,7 +464,10 @@ defmodule Honchox.Sessions do
       ]
       |> Enum.reject(fn {_key, value} -> is_nil(value) end)
 
-    Honchox.get(client, with_query("#{session_path(workspace_id, session_id)}/queue/status", query))
+    Honchox.get(
+      client,
+      with_query("#{session_path(workspace_id, session_id)}/queue/status", query)
+    )
   end
 
   @doc """
@@ -461,9 +482,9 @@ defmodule Honchox.Sessions do
     * `:include_most_frequent` — include most frequently referenced conclusions
     * `:max_conclusions` — cap on total conclusions
   """
-  @spec representation(Honchox.t(), String.t(), String.t(), keyword() | map()) ::
+  @spec representation(Honchox.Client.t(), String.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def representation(%Honchox{} = client, session_id, peer_id, opts \\ []) do
+  def representation(%Honchox.Client{} = client, session_id, peer_id, opts \\ []) do
     {workspace_id, body} =
       opts
       |> workspace_scoped_map!()
@@ -482,7 +503,8 @@ defmodule Honchox.Sessions do
 
   defp session_collection_path(workspace_id), do: "#{@base_path}/#{workspace_id}/sessions"
 
-  defp session_path(workspace_id, session_id), do: "#{session_collection_path(workspace_id)}/#{session_id}"
+  defp session_path(workspace_id, session_id),
+    do: "#{session_collection_path(workspace_id)}/#{session_id}"
 
   defp metadata_field(nil), do: nil
   defp metadata_field(value), do: Jason.encode!(value)

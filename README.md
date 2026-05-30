@@ -71,7 +71,8 @@ client = Honchox.new()
 |----------------|------------------|--------------------------|
 | `:api_key`     | `HONCHO_API_KEY` | *(required unless `:jwt`)* |
 | `:jwt`         | —                | *(scoped bearer token)*  |
-| `:base_url`    | `HONCHO_URL`     | `https://api.honcho.ai`  |
+| `:base_url`    | `HONCHO_URL`     | `https://api.honcho.dev`  |
+| `:workspace_id`| `HONCHO_WORKSPACE_ID` | `default`          |
 | `:timeout`     | —                | `60_000` ms              |
 | `:max_retries` | —                | `2`                      |
 

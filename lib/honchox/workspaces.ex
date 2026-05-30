@@ -44,9 +44,9 @@ defmodule Honchox.Workspaces do
       )
 
   """
-  @spec get_or_create(Honchox.t(), String.t(), keyword() | map()) ::
+  @spec get_or_create(Honchox.Client.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def get_or_create(%Honchox{} = client, workspace_id, attrs \\ []) do
+  def get_or_create(%Honchox.Client{} = client, workspace_id, attrs \\ []) do
     client
     |> Honchox.post(@base_path, attrs |> normalize_map() |> Map.put(:id, workspace_id))
   end
@@ -57,9 +57,9 @@ defmodule Honchox.Workspaces do
   Accepts the same options as `get_or_create/3` (`:metadata`, `:configuration`).
   Only the provided fields are updated.
   """
-  @spec update(Honchox.t(), String.t(), keyword() | map()) ::
+  @spec update(Honchox.Client.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def update(%Honchox{} = client, workspace_id, attrs \\ []) do
+  def update(%Honchox.Client{} = client, workspace_id, attrs \\ []) do
     client
     |> Honchox.put("#{@base_path}/#{workspace_id}", normalize_map(attrs))
   end
@@ -67,8 +67,8 @@ defmodule Honchox.Workspaces do
   @doc """
   Deletes the workspace identified by `workspace_id`.
   """
-  @spec delete(Honchox.t(), String.t()) :: {:ok, term()} | {:error, Honchox.Error.t()}
-  def delete(%Honchox{} = client, workspace_id) do
+  @spec delete(Honchox.Client.t(), String.t()) :: {:ok, term()} | {:error, Honchox.Error.t()}
+  def delete(%Honchox.Client{} = client, workspace_id) do
     Honchox.delete(client, "#{@base_path}/#{workspace_id}")
   end
 
@@ -81,8 +81,8 @@ defmodule Honchox.Workspaces do
     * `:size` — page size (default: `50`)
     * `:filters` — map of filter criteria (default: `%{}`)
   """
-  @spec list(Honchox.t(), keyword() | map()) :: {:ok, map()} | {:error, Honchox.Error.t()}
-  def list(%Honchox{} = client, opts \\ []) do
+  @spec list(Honchox.Client.t(), keyword() | map()) :: {:ok, map()} | {:error, Honchox.Error.t()}
+  def list(%Honchox.Client{} = client, opts \\ []) do
     opts = normalize_opts(opts)
     page = get_opt(opts, :page) || 1
     size = get_opt(opts, :size) || 50
@@ -104,9 +104,9 @@ defmodule Honchox.Workspaces do
     * `:filters` — map of filter criteria (default: `%{}`)
     * `:limit` — max number of results (default: `10`)
   """
-  @spec search(Honchox.t(), String.t(), keyword() | map()) ::
+  @spec search(Honchox.Client.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def search(%Honchox{} = client, query, opts \\ []) do
+  def search(%Honchox.Client{} = client, query, opts \\ []) do
     {workspace_id, opts} = workspace_scoped_map!(opts)
 
     body =
@@ -131,9 +131,9 @@ defmodule Honchox.Workspaces do
     * `:sender_id` — filter by sender peer ID
     * `:session_id` — filter by session ID
   """
-  @spec queue_status(Honchox.t(), keyword() | map()) ::
+  @spec queue_status(Honchox.Client.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def queue_status(%Honchox{} = client, opts \\ []) do
+  def queue_status(%Honchox.Client{} = client, opts \\ []) do
     {workspace_id, opts} = workspace_scoped_opts!(opts)
 
     Honchox.get(
@@ -153,9 +153,9 @@ defmodule Honchox.Workspaces do
     * `:workspace_id` — the workspace to schedule a dream for (**required**)
     * `:dream_type` — type of dream to schedule (default: `"omni"`)
   """
-  @spec schedule_dream(Honchox.t(), keyword() | map()) ::
+  @spec schedule_dream(Honchox.Client.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def schedule_dream(%Honchox{} = client, opts \\ []) do
+  def schedule_dream(%Honchox.Client{} = client, opts \\ []) do
     {workspace_id, opts} = workspace_scoped_map!(opts)
 
     body =

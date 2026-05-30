@@ -104,7 +104,13 @@ defmodule Honchox.WorkspacesTest do
       assert URI.decode_query(conn.query_string) == %{"page" => "1", "size" => "5"}
       assert conn.body_params == %{"filters" => %{}}
 
-      Req.Test.json(conn, %{"items" => [%{"id" => "shared"}], "page" => 1, "size" => 5, "total" => 1, "pages" => 1})
+      Req.Test.json(conn, %{
+        "items" => [%{"id" => "shared"}],
+        "page" => 1,
+        "size" => 5,
+        "total" => 1,
+        "pages" => 1
+      })
     end)
 
     client =

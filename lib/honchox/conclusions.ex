@@ -44,8 +44,8 @@ defmodule Honchox.Conclusions do
     * `:size` — page size (default: `50`)
     * `:filters` — map of filter criteria (default: `%{}`)
   """
-  @spec list(Honchox.t(), keyword() | map()) :: {:ok, map()} | {:error, Honchox.Error.t()}
-  def list(%Honchox{} = client, opts \\ []) do
+  @spec list(Honchox.Client.t(), keyword() | map()) :: {:ok, map()} | {:error, Honchox.Error.t()}
+  def list(%Honchox.Client{} = client, opts \\ []) do
     {workspace_id, opts} = workspace_scoped_opts!(opts)
     page = opt(opts, :page) || 1
     size = opt(opts, :size) || 50
@@ -65,9 +65,9 @@ defmodule Honchox.Conclusions do
     * `:distance` — maximum cosine distance threshold (default: `0.5`)
     * `:filters` — map of filter criteria (default: `%{}`)
   """
-  @spec query(Honchox.t(), String.t(), keyword() | map()) ::
+  @spec query(Honchox.Client.t(), String.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def query(%Honchox{} = client, query, opts \\ []) do
+  def query(%Honchox.Client{} = client, query, opts \\ []) do
     {workspace_id, body} =
       opts
       |> workspace_scoped_map!()
@@ -103,9 +103,9 @@ defmodule Honchox.Conclusions do
       ], workspace_id: "my-workspace")
 
   """
-  @spec create(Honchox.t(), [map()], keyword() | map()) ::
+  @spec create(Honchox.Client.t(), [map()], keyword() | map()) ::
           {:ok, term()} | {:error, Honchox.Error.t()}
-  def create(%Honchox{} = client, conclusions, opts \\ []) do
+  def create(%Honchox.Client{} = client, conclusions, opts \\ []) do
     {workspace_id, _opts} = workspace_scoped_opts!(opts)
     Honchox.post(client, collection_path(workspace_id), %{conclusions: conclusions})
   end
@@ -117,9 +117,9 @@ defmodule Honchox.Conclusions do
 
     * `:workspace_id` — (**required**)
   """
-  @spec delete(Honchox.t(), String.t(), keyword() | map()) ::
+  @spec delete(Honchox.Client.t(), String.t(), keyword() | map()) ::
           {:ok, term()} | {:error, Honchox.Error.t()}
-  def delete(%Honchox{} = client, conclusion_id, opts \\ []) do
+  def delete(%Honchox.Client{} = client, conclusion_id, opts \\ []) do
     {workspace_id, _opts} = workspace_scoped_opts!(opts)
     Honchox.delete(client, "#{collection_path(workspace_id)}/#{conclusion_id}")
   end
@@ -134,9 +134,9 @@ defmodule Honchox.Conclusions do
     * `:observed_id` — filter by observed peer ID
     * `:session_id` — filter by session ID
   """
-  @spec representation(Honchox.t(), keyword() | map()) ::
+  @spec representation(Honchox.Client.t(), keyword() | map()) ::
           {:ok, map()} | {:error, Honchox.Error.t()}
-  def representation(%Honchox{} = client, opts \\ []) do
+  def representation(%Honchox.Client{} = client, opts \\ []) do
     {workspace_id, opts} = workspace_scoped_map!(opts)
     Honchox.post(client, "#{collection_path(workspace_id)}/representation", opts)
   end

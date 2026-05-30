@@ -161,10 +161,9 @@ defmodule Honchox.SessionsTest do
     end)
 
     peers = [%{peer_id: "alice"}, %{peer_id: "assistant"}]
+
     assert {:ok, %{"items" => [_ | _]}} =
-             Honchox.Sessions.add_peers(client(), "session-1", peers,
-               workspace_id: "workspace-1"
-             )
+             Honchox.Sessions.add_peers(client(), "session-1", peers, workspace_id: "workspace-1")
   end
 
   test "set_peers/3 replaces session peers" do

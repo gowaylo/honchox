@@ -121,7 +121,7 @@ is to rotate the `JWT_SECRET` on the server (which invalidates _all_ keys).
 
 Instead of creating a key and then building a new client manually, use
 `create_client/2`. It creates the scoped key and returns a ready-to-use
-`%Honchox{}` client that inherits `base_url`, `timeout`, and `max_retries`
+`%Honchox.Client{}` client that inherits `base_url`, `timeout`, and `max_retries`
 from the admin client:
 
 ```elixir

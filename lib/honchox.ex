@@ -13,14 +13,16 @@ defmodule Honchox do
 
       client = Honchox.new(api_key: "sk-...")
 
-  The base URL defaults to `https://api.honcho.ai` and can be overridden via
+  The base URL defaults to `https://api.honcho.dev` and can be overridden via
   the `:base_url` option or the `HONCHO_URL` environment variable.
 
   ## Workspace-scoped resources
 
   Most resource endpoints (peers, sessions, conclusions) are scoped to a
-  workspace. Instead of storing the workspace ID in the client, you pass it
-  explicitly via the `:workspace_id` option on each call:
+  workspace. The client stores a workspace ID from `:workspace_id`,
+  `HONCHO_WORKSPACE_ID`, or `"default"` as client configuration. Current
+  resource modules still require `:workspace_id` on each resource call until
+  client-level workspace defaults are wired into resources:
 
       Honchox.Peers.get_or_create(client, "alice", workspace_id: "my-workspace")
 
@@ -39,35 +41,27 @@ defmodule Honchox do
   modules don't cover a specific endpoint.
   """
 
-  @default_base_url "https://api.honcho.ai"
+  @default_base_url "https://api.honcho.dev"
   @default_timeout 60_000
   @default_max_retries 2
 
   @typedoc "A configured Honcho API client."
-  @type t :: %__MODULE__{
-          api_key: String.t() | nil,
-          jwt: String.t() | nil,
-          base_url: String.t(),
-          workspace_id: String.t() | nil,
-          req: Req.Request.t(),
-          timeout: pos_integer(),
-          max_retries: non_neg_integer()
-        }
+  @type t :: Honchox.Client.t()
 
-  @typedoc "Options accepted by `new/1`."
+  @typedoc "Options accepted by `new/1`, including additional `Req.new/1` options."
   @type client_option ::
           {:api_key, String.t()}
           | {:jwt, String.t()}
           | {:base_url, String.t()}
+          | {:workspace_id, String.t()}
           | {:timeout, pos_integer()}
           | {:max_retries, non_neg_integer()}
-
-  defstruct [:api_key, :jwt, :base_url, :workspace_id, :req, :timeout, :max_retries]
+          | {atom(), term()}
 
   @doc """
   Builds a new Honcho API client.
 
-  Returns a `%Honchox{}` struct with a pre-configured `Req.Request` that
+  Returns a `%Honchox.Client{}` struct with a pre-configured `Req.Request` that
   carries authentication and transport defaults.
 
   ## Options
@@ -78,6 +72,8 @@ defmodule Honchox do
       instead of `:api_key`.
     * `:base_url` — API base URL. Falls back to `HONCHO_URL` env var, then
       `#{@default_base_url}`. (default: `"#{@default_base_url}"`)
+    * `:workspace_id` — client workspace ID. Falls back to `HONCHO_WORKSPACE_ID`,
+      then `"default"`. Resource calls still require `:workspace_id` today.
     * `:timeout` — receive timeout in milliseconds (default: `#{@default_timeout}`)
     * `:max_retries` — max retries on transient failures (default: `#{@default_max_retries}`)
 
@@ -87,7 +83,7 @@ defmodule Honchox do
 
       client = Honchox.new(api_key: "sk-...")
       client.base_url
-      #=> "https://api.honcho.ai"
+      #=> "https://api.honcho.dev"
 
       client = Honchox.new(api_key: "sk-...", base_url: "https://api.honcho.dev")
       client.base_url
@@ -96,31 +92,7 @@ defmodule Honchox do
   """
   @spec new([client_option]) :: t()
   def new(opts \\ []) when is_list(opts) do
-    jwt = Keyword.get(opts, :jwt)
-    api_key = if jwt, do: nil, else: required_config_value!(opts, :api_key, "HONCHO_API_KEY")
-    token = jwt || api_key
-    base_url = config_value(opts, :base_url, "HONCHO_URL", @default_base_url)
-    timeout = Keyword.get(opts, :timeout, @default_timeout)
-    max_retries = Keyword.get(opts, :max_retries, @default_max_retries)
-
-    req_opts =
-      opts
-      |> Keyword.drop([:api_key, :jwt, :workspace_id, :base_url, :timeout, :max_retries])
-      |> Keyword.put_new(:base_url, base_url)
-      |> Keyword.put_new(:auth, {:bearer, token})
-      |> Keyword.put_new(:receive_timeout, timeout)
-      |> Keyword.put_new(:retry, :transient)
-      |> Keyword.put_new(:max_retries, max_retries)
-
-    %__MODULE__{
-      api_key: api_key,
-      jwt: jwt,
-      base_url: base_url,
-      workspace_id: nil,
-      timeout: timeout,
-      max_retries: max_retries,
-      req: Req.new(req_opts)
-    }
+    Honchox.Client.new(opts)
   end
 
   @doc """
@@ -129,8 +101,8 @@ defmodule Honchox do
   Returns `{:ok, body}` on success or `{:error, %Honchox.Error{}}` on failure.
   """
   @spec get(t(), String.t(), keyword()) :: {:ok, term()} | {:error, Honchox.Error.t()}
-  def get(%__MODULE__{} = client, path, params \\ []) do
-    request(client, :get, path, params: params)
+  def get(%Honchox.Client{} = client, path, params \\ []) do
+    Honchox.HTTP.get(client, path, params)
   end
 
   @doc """
@@ -139,8 +111,8 @@ defmodule Honchox do
   Returns `{:ok, body}` on success or `{:error, %Honchox.Error{}}` on failure.
   """
   @spec post(t(), String.t(), term()) :: {:ok, term()} | {:error, Honchox.Error.t()}
-  def post(%__MODULE__{} = client, path, body) do
-    request(client, :post, path, json: body)
+  def post(%Honchox.Client{} = client, path, body) do
+    Honchox.HTTP.post(client, path, body)
   end
 
   @doc """
@@ -149,8 +121,8 @@ defmodule Honchox do
   Returns `{:ok, body}` on success or `{:error, %Honchox.Error{}}` on failure.
   """
   @spec put(t(), String.t(), term()) :: {:ok, term()} | {:error, Honchox.Error.t()}
-  def put(%__MODULE__{} = client, path, body) do
-    request(client, :put, path, json: body)
+  def put(%Honchox.Client{} = client, path, body) do
+    Honchox.HTTP.put(client, path, body)
   end
 
   @doc """
@@ -159,8 +131,8 @@ defmodule Honchox do
   Returns `{:ok, body}` on success or `{:error, %Honchox.Error{}}` on failure.
   """
   @spec patch(t(), String.t(), term()) :: {:ok, term()} | {:error, Honchox.Error.t()}
-  def patch(%__MODULE__{} = client, path, body) do
-    request(client, :patch, path, json: body)
+  def patch(%Honchox.Client{} = client, path, body) do
+    Honchox.HTTP.patch(client, path, body)
   end
 
   @doc """
@@ -169,8 +141,8 @@ defmodule Honchox do
   Returns `{:ok, body}` on success or `{:error, %Honchox.Error{}}` on failure.
   """
   @spec delete(t(), String.t(), keyword()) :: {:ok, term()} | {:error, Honchox.Error.t()}
-  def delete(%__MODULE__{} = client, path, params \\ []) do
-    request(client, :delete, path, params: params)
+  def delete(%Honchox.Client{} = client, path, params \\ []) do
+    Honchox.HTTP.delete(client, path, params)
   end
 
   @doc """
@@ -181,68 +153,9 @@ defmodule Honchox do
 
   Returns `{:ok, body}` on success or `{:error, %Honchox.Error{}}` on failure.
   """
-  @spec upload(t(), String.t(), keyword(), keyword()) :: {:ok, term()} | {:error, Honchox.Error.t()}
-  def upload(%__MODULE__{} = client, path, fields, opts \\ []) do
-    request(client, :post, path, Keyword.merge(opts, form_multipart: fields))
-  end
-
-  defp request(%__MODULE__{} = client, method, path, request_opts) do
-    case Req.request(
-           client.req,
-           Keyword.put(request_opts, :method, method) |> Keyword.put(:url, path)
-         ) do
-      {:ok, %Req.Response{} = response} ->
-        handle_response(response)
-
-      {:error, exception} ->
-        {:error, to_error(exception)}
-    end
-  end
-
-  defp handle_response(%Req.Response{status: status, body: body}) when status in 200..299 do
-    case {status, body} do
-      {204, ""} -> {:ok, nil}
-      {204, nil} -> {:ok, nil}
-      _ -> {:ok, body}
-    end
-  end
-
-  defp handle_response(%Req.Response{status: status, body: body}) do
-    {:error, Honchox.Error.http_error(status, body)}
-  end
-
-  defp to_error(%Req.TransportError{reason: reason} = exception) do
-    Honchox.Error.transport_error(reason, Exception.message(exception))
-  end
-
-  defp to_error(%Req.HTTPError{} = exception) do
-    %Honchox.Error{
-      message: Exception.message(exception),
-      status: nil,
-      code: exception.reason,
-      body: nil,
-      kind: :http_error
-    }
-  end
-
-  defp to_error(exception) do
-    Honchox.Error.request_error(exception)
-  end
-
-  defp config_value(opts, key, env_var, default \\ nil) do
-    case Keyword.fetch(opts, key) do
-      {:ok, value} when not is_nil(value) -> value
-      _ -> System.get_env(env_var) || default
-    end
-  end
-
-  defp required_config_value!(opts, key, env_var) do
-    value = config_value(opts, key, env_var)
-
-    if is_nil(value) do
-      raise ArgumentError, "missing required Honchox config: #{key}"
-    end
-
-    value
+  @spec upload(t(), String.t(), keyword(), keyword()) ::
+          {:ok, term()} | {:error, Honchox.Error.t()}
+  def upload(%Honchox.Client{} = client, path, fields, opts \\ []) do
+    Honchox.HTTP.upload(client, path, fields, opts)
   end
 end

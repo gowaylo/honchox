@@ -13,14 +13,16 @@ defmodule Honchox.HTTP do
     request(client, :get, path, params: params)
   end
 
-  @spec post(Client.t(), String.t(), term()) :: {:ok, term()} | {:error, Honchox.Error.t()}
-  def post(%Client{} = client, path, body) do
-    request(client, :post, path, json: body)
+  @spec post(Client.t(), String.t(), term(), keyword()) ::
+          {:ok, term()} | {:error, Honchox.Error.t()}
+  def post(%Client{} = client, path, body, params \\ []) do
+    request(client, :post, path, json: body, params: params)
   end
 
-  @spec put(Client.t(), String.t(), term()) :: {:ok, term()} | {:error, Honchox.Error.t()}
-  def put(%Client{} = client, path, body) do
-    request(client, :put, path, json: body)
+  @spec put(Client.t(), String.t(), term(), keyword()) ::
+          {:ok, term()} | {:error, Honchox.Error.t()}
+  def put(%Client{} = client, path, body, params \\ []) do
+    request(client, :put, path, json: body, params: params)
   end
 
   @spec patch(Client.t(), String.t(), term()) :: {:ok, term()} | {:error, Honchox.Error.t()}
@@ -37,6 +39,20 @@ defmodule Honchox.HTTP do
           {:ok, term()} | {:error, Honchox.Error.t()}
   def upload(%Client{} = client, path, fields, opts \\ []) do
     request(client, :post, path, Keyword.merge(opts, form_multipart: fields))
+  end
+
+  @doc false
+  @spec delete_json(Client.t(), String.t(), term()) ::
+          {:ok, term()} | {:error, Honchox.Error.t()}
+  def delete_json(%Client{} = client, path, body) do
+    request(client, :delete, path, json: body)
+  end
+
+  @doc false
+  @spec post_query(Client.t(), String.t(), keyword()) ::
+          {:ok, term()} | {:error, Honchox.Error.t()}
+  def post_query(%Client{} = client, path, params \\ []) do
+    request(client, :post, path, params: params)
   end
 
   defp request(%Client{} = client, method, path, request_opts) do

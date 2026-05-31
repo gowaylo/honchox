@@ -43,7 +43,7 @@ honcho_key =
   System.get_env("HONCHO_API_KEY") ||
     raise "Set HONCHO_API_KEY before running this script"
 
-model_name = System.get_env("OPENROUTER_MODEL") || "deepseek/deepseek-v4-flash"
+model_name = System.get_env("OPENROUTER_MODEL") || "deepseek/deepseek-chat-v3.1"
 workspace_id = System.get_env("HONCHO_WORKSPACE_ID") || "honchox-sagents-cli"
 assistant_peer_id = "honchox-project-assistant"
 default_user_peer_id = "current-cli-user"
@@ -211,6 +211,7 @@ project_file_tool =
       model: model,
       base_system_prompt: """
       You are a personal technical assistant for the Honchox project.
+      Always answer in Portuguese unless the user explicitly asks for another language.
 
       Your job is to help Lucas understand, validate, and integrate Honchox:
       - explain the public API and optional integrations;
@@ -232,7 +233,9 @@ project_file_tool =
         simple stable peer id derived from it when calling Honchox memory tools.
 
       Use honchox_project_file before answering questions about current source code,
-      module names, APIs, scripts, tests, docs, or integration details. Use Honchox
+      module names, APIs, scripts, tests, docs, or integration details. After a tool
+      call, always produce a normal text answer for the user; never finish with an
+      empty assistant message. Use Honchox
       memory tools before answering questions that depend on prior context,
       preferences, profile facts, or memories. Be concise in the CLI.
       """,
@@ -254,6 +257,40 @@ Default memory peer: #{default_user_peer_id} until you tell the agent who you ar
 Project root: #{project_root}
 Type /help for commands, /exit to quit.
 """)
+
+assistant_content = fn message ->
+  case Map.get(message, :content) do
+    content when is_binary(content) and content != "" ->
+      content
+
+    content when is_list(content) ->
+      Enum.map_join(content, "", fn
+        %LangChain.Message.ContentPart{content: text} -> text
+        text when is_binary(text) -> text
+        other -> inspect(other)
+      end)
+
+    _other ->
+      processed = Map.get(message, :processed_content)
+      if is_binary(processed) and processed != "", do: processed, else: nil
+  end
+end
+
+repair_empty_response = fn agent, state ->
+  repair_state = %{
+    state
+    | messages:
+        state.messages ++
+          [
+            Message.new_user!("""
+            Your previous assistant message was empty after using a tool. Do not call another tool now.
+            Read the existing tool result in the conversation and answer the user's last question directly in Portuguese.
+            """)
+          ]
+  }
+
+  Agent.execute(agent, repair_state)
+end
 
 loop = fn loop, state ->
   input = IO.gets("you> ")
@@ -341,21 +378,38 @@ loop = fn loop, state ->
         {:ok, next_state} ->
           assistant_message = List.last(next_state.messages)
 
-          content =
-            case Map.get(assistant_message, :content) do
-              content when is_list(content) ->
-                Enum.map_join(content, "", fn
-                  %LangChain.Message.ContentPart{content: text} -> text
-                  text when is_binary(text) -> text
-                  other -> inspect(other)
-                end)
+          case assistant_content.(assistant_message) do
+            nil ->
+              case repair_empty_response.(agent, next_state) do
+                {:ok, repaired_state} ->
+                  repaired_message = List.last(repaired_state.messages)
 
-              content ->
-                content || inspect(assistant_message)
-            end
+                  content =
+                    assistant_content.(repaired_message) ||
+                      "[empty model response after tool call]"
 
-          IO.puts("agent> #{content}\n")
-          loop.(loop, next_state)
+                  IO.puts("agent> #{content}\n")
+                  loop.(loop, repaired_state)
+
+                {:error, repair_error} ->
+                  IO.puts(
+                    "agent error after empty response: #{inspect(repair_error, pretty: true)}"
+                  )
+
+                  loop.(loop, next_state)
+
+                other ->
+                  IO.puts(
+                    "agent returned empty response and repair failed: #{inspect(other, pretty: true)}"
+                  )
+
+                  loop.(loop, next_state)
+              end
+
+            content ->
+              IO.puts("agent> #{content}\n")
+              loop.(loop, next_state)
+          end
 
         {:interrupt, next_state, interrupt_data} ->
           IO.puts("agent interrupted: #{inspect(interrupt_data, pretty: true)}")

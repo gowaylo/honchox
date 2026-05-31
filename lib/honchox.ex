@@ -16,27 +16,14 @@ defmodule Honchox do
   The base URL defaults to `https://api.honcho.dev` and can be overridden via
   the `:base_url` option or the `HONCHO_URL` environment variable.
 
-  ## Workspace-scoped resources
+  ## SDK-shaped resources
 
-  Most resource endpoints (peers, sessions, conclusions) are scoped to a
-  workspace. The client stores a workspace ID from `:workspace_id`,
-  `HONCHO_WORKSPACE_ID`, or `"default"` as client configuration. Current
-  resource modules still require `:workspace_id` on each resource call until
-  client-level workspace defaults are wired into resources:
+  Most resource endpoints are scoped to a workspace. The client stores a
+  workspace ID from `:workspace_id`, `HONCHO_WORKSPACE_ID`, or `"default"` as
+  client configuration and SDK-shaped entry points return structs:
 
-      Honchox.Peers.get_or_create(client, "alice", workspace_id: "my-workspace")
-
-  ## Resource modules
-
-    * `Honchox.Workspaces` — workspace lifecycle, search, queue status, dream scheduling
-    * `Honchox.Peers` — peer lifecycle, chat, context, representation, cards
-    * `Honchox.Sessions` — session lifecycle, messages, peers, context, files
-
-  ## Low-level HTTP
-
-  The `get/3`, `post/3`, `put/3`, `patch/3`, `delete/3`, and `upload/4`
-  functions are available for making direct API calls when the resource
-  modules don't cover a specific endpoint.
+      {:ok, peer} = Honchox.peer(client, "alice")
+      {:ok, response} = Honchox.Peer.chat(peer, "What was our last topic?")
   """
 
   @default_base_url "https://api.honcho.dev"
@@ -153,67 +140,4 @@ defmodule Honchox do
     end
   end
 
-  @doc """
-  Sends a GET request to the given `path` with optional query `params`.
-
-  Returns `{:ok, body}` on success or `{:error, %Honchox.Error{}}` on failure.
-  """
-  @spec get(t(), String.t(), keyword()) :: {:ok, term()} | {:error, Honchox.Error.t()}
-  def get(%Honchox.Client{} = client, path, params \\ []) do
-    Honchox.HTTP.get(client, path, params)
-  end
-
-  @doc """
-  Sends a POST request to the given `path` with a JSON `body`.
-
-  Returns `{:ok, body}` on success or `{:error, %Honchox.Error{}}` on failure.
-  """
-  @spec post(t(), String.t(), term()) :: {:ok, term()} | {:error, Honchox.Error.t()}
-  def post(%Honchox.Client{} = client, path, body) do
-    Honchox.HTTP.post(client, path, body)
-  end
-
-  @doc """
-  Sends a PUT request to the given `path` with a JSON `body`.
-
-  Returns `{:ok, body}` on success or `{:error, %Honchox.Error{}}` on failure.
-  """
-  @spec put(t(), String.t(), term()) :: {:ok, term()} | {:error, Honchox.Error.t()}
-  def put(%Honchox.Client{} = client, path, body) do
-    Honchox.HTTP.put(client, path, body)
-  end
-
-  @doc """
-  Sends a PATCH request to the given `path` with a JSON `body`.
-
-  Returns `{:ok, body}` on success or `{:error, %Honchox.Error{}}` on failure.
-  """
-  @spec patch(t(), String.t(), term()) :: {:ok, term()} | {:error, Honchox.Error.t()}
-  def patch(%Honchox.Client{} = client, path, body) do
-    Honchox.HTTP.patch(client, path, body)
-  end
-
-  @doc """
-  Sends a DELETE request to the given `path` with optional query `params`.
-
-  Returns `{:ok, body}` on success or `{:error, %Honchox.Error{}}` on failure.
-  """
-  @spec delete(t(), String.t(), keyword()) :: {:ok, term()} | {:error, Honchox.Error.t()}
-  def delete(%Honchox.Client{} = client, path, params \\ []) do
-    Honchox.HTTP.delete(client, path, params)
-  end
-
-  @doc """
-  Sends a multipart upload (POST) to the given `path`.
-
-  `fields` is a keyword list of form fields passed to Req's `:form_multipart`
-  option. Any extra `opts` are merged into the Req request options.
-
-  Returns `{:ok, body}` on success or `{:error, %Honchox.Error{}}` on failure.
-  """
-  @spec upload(t(), String.t(), keyword(), keyword()) ::
-          {:ok, term()} | {:error, Honchox.Error.t()}
-  def upload(%Honchox.Client{} = client, path, fields, opts \\ []) do
-    Honchox.HTTP.upload(client, path, fields, opts)
-  end
 end

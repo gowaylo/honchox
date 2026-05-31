@@ -6,8 +6,6 @@
 # Requer: HONCHO_API_KEY (admin JWT) e HONCHO_URL no ambiente
 
 defmodule TestKeys do
-  @base_path "/v3/keys"
-
   def run do
     client = Honchox.new()
 
@@ -15,106 +13,33 @@ defmodule TestKeys do
     IO.puts("URL:   #{client.base_url}")
     IO.puts("Token: #{String.slice(client.api_key, 0..30)}...\n")
 
-    # Primeiro garante que temos um workspace pra referenciar
-    IO.puts("--- Setup: criando workspace de teste ---")
+    IO.puts("--- Setup: criando recursos de teste ---")
     ws_id = "keys-test-#{System.system_time(:second)}"
+    client = Honchox.new(api_key: client.api_key, base_url: client.base_url, workspace_id: ws_id)
 
-    case Honchox.Workspaces.get_or_create(client, ws_id) do
-      {:ok, ws} ->
-        IO.puts("[OK] Workspace criado: #{ws["id"]}\n")
+    {:ok, workspace} = Honchox.workspace(client)
+    IO.puts("[OK] Workspace pronto: #{workspace.id}\n")
 
-      {:error, err} ->
-        IO.puts("[ERRO] Falha ao criar workspace: #{inspect(err)}")
-        System.halt(1)
-    end
+    {:ok, peer} = Honchox.peer(client, "test-peer", metadata: %{test: true})
+    peer_id = peer.id
+    IO.puts("[OK] Peer pronto: #{peer_id}")
 
-    # Cria um peer e session pra usar nos testes de escopo
-    {:ok, peer} =
-      Honchox.Peers.get_or_create(client, "test-peer",
-        workspace_id: ws_id,
-        metadata: %{test: true}
-      )
-
-    peer_id = peer["id"]
-    IO.puts("[OK] Peer criado: #{peer_id}")
-
-    {:ok, session} =
-      Honchox.Sessions.get_or_create(client, "test-session",
-        workspace_id: ws_id,
-        metadata: %{test: true}
-      )
-
-    session_id = session["id"]
-    IO.puts("[OK] Session criada: #{session_id}\n")
-
-    # =====================================================================
-    # Cenários de teste
-    # =====================================================================
+    {:ok, session} = Honchox.session(client, "test-session", metadata: %{test: true})
+    session_id = session.id
+    IO.puts("[OK] Session pronta: #{session_id}\n")
 
     tests = [
-      # --- Cenários que devem funcionar (200) ---
-      {
-        "1. Key com escopo workspace apenas",
-        [workspace_id: ws_id],
-        :ok
-      },
-      {
-        "2. Key com escopo peer apenas",
-        [peer_id: peer_id],
-        :ok
-      },
-      {
-        "3. Key com escopo session apenas",
-        [session_id: session_id],
-        :ok
-      },
-      {
-        "4. Key com escopo workspace + peer",
-        [workspace_id: ws_id, peer_id: peer_id],
-        :ok
-      },
-      {
-        "5. Key com escopo workspace + session",
-        [workspace_id: ws_id, session_id: session_id],
-        :ok
-      },
-      {
-        "6. Key com escopo peer + session",
-        [peer_id: peer_id, session_id: session_id],
-        :ok
-      },
-      {
-        "7. Key com todos os escopos (workspace + peer + session)",
-        [workspace_id: ws_id, peer_id: peer_id, session_id: session_id],
-        :ok
-      },
-      {
-        "8. Key com workspace + expires_at (futuro)",
-        [workspace_id: ws_id, expires_at: future_datetime()],
-        :ok
-      },
-      {
-        "9. Key com todos escopos + expires_at",
-        [
-          workspace_id: ws_id,
-          peer_id: peer_id,
-          session_id: session_id,
-          expires_at: future_datetime()
-        ],
-        :ok
-      },
-
-      # --- Cenários que devem falhar (422 — sem escopo) ---
-      {
-        "10. Key sem nenhum escopo (deve falhar 422)",
-        [],
-        :error
-      },
-      {
-        "11. Key com apenas expires_at, sem escopo (deve falhar 422)",
-        [expires_at: future_datetime()],
-        :error
-      }
+      {"1. Key com escopo workspace apenas", [workspace_id: ws_id], :ok},
+      {"2. Key com escopo peer apenas", [peer_id: peer_id], :ok},
+      {"3. Key com escopo session apenas", [session_id: session_id], :ok},
+      {"4. Key com escopo workspace + peer", [workspace_id: ws_id, peer_id: peer_id], :ok},
+      {"5. Key com escopo workspace + session", [workspace_id: ws_id, session_id: session_id], :ok},
+      {"6. Key com escopo peer + session", [peer_id: peer_id, session_id: session_id], :ok},
+      {"7. Key com todos os escopos", [workspace_id: ws_id, peer_id: peer_id, session_id: session_id], :ok},
+      {"8. Key com workspace + expires_at", [workspace_id: ws_id, expires_at: future_datetime()], :ok},
+      {"9. Key com todos escopos + expires_at", [workspace_id: ws_id, peer_id: peer_id, session_id: session_id, expires_at: future_datetime()], :ok},
+      {"10. Key sem nenhum escopo (deve falhar 422)", [], :error},
+      {"11. Key com apenas expires_at, sem escopo (deve falhar 422)", [expires_at: future_datetime()], :error}
     ]
 
     results =
@@ -122,7 +47,7 @@ defmodule TestKeys do
         IO.puts("--- #{name} ---")
         IO.puts("    Params: #{inspect(params)}")
 
-        result = create_key(client, params)
+        result = Honchox.Keys.create(client, params)
 
         case {result, expected} do
           {{:ok, %{"key" => jwt}}, :ok} ->
@@ -148,54 +73,36 @@ defmodule TestKeys do
         end
       end)
 
-    # =====================================================================
-    # Teste extra: usar uma key gerada pra fazer uma chamada autenticada
-    # =====================================================================
-
     IO.puts("\n--- 12. Validação: usar key com escopo workspace pra listar peers ---")
 
-    case create_key(client, workspace_id: ws_id) do
+    case Honchox.Keys.create(client, workspace_id: ws_id) do
       {:ok, %{"key" => scoped_key}} ->
-        scoped_client = Honchox.new(api_key: scoped_key, base_url: client.base_url)
+        scoped_client = Honchox.new(jwt: scoped_key, base_url: client.base_url, workspace_id: ws_id)
 
-        case Honchox.Peers.list(scoped_client, workspace_id: ws_id) do
-          {:ok, _peers} ->
-            IO.puts("    [PASS] Key com escopo workspace conseguiu listar peers")
-
-          {:error, err} ->
-            IO.puts("    [FAIL] Key com escopo workspace rejeitada: #{inspect(err)}")
+        case Honchox.peers(scoped_client) do
+          {:ok, _peers} -> IO.puts("    [PASS] Key com escopo workspace conseguiu listar peers")
+          {:error, err} -> IO.puts("    [FAIL] Key com escopo workspace rejeitada: #{inspect(err)}")
         end
 
       {:error, err} ->
         IO.puts("    [SKIP] Não conseguiu criar key: #{inspect(err)}")
     end
 
-    IO.puts("\n--- 13. Validação: key com escopo session NÃO deve acessar outro workspace ---")
+    IO.puts("\n--- 13. Validação: key com escopo session NÃO deve acessar peers do workspace ---")
 
-    case create_key(client, session_id: session_id) do
+    case Honchox.Keys.create(client, session_id: session_id) do
       {:ok, %{"key" => narrow_key}} ->
-        narrow_client = Honchox.new(api_key: narrow_key, base_url: client.base_url)
+        narrow_client = Honchox.new(jwt: narrow_key, base_url: client.base_url, workspace_id: ws_id)
 
-        case Honchox.Workspaces.list(narrow_client) do
-          {:ok, _} ->
-            IO.puts(
-              "    [INFO] Key com escopo session conseguiu listar workspaces (verificar se esperado)"
-            )
-
-          {:error, %Honchox.Error{status: 401}} ->
-            IO.puts("    [PASS] Key com escopo session foi rejeitada ao listar workspaces (401)")
-
-          {:error, err} ->
-            IO.puts("    [INFO] Erro: #{inspect(err)}")
+        case Honchox.peers(narrow_client) do
+          {:ok, _} -> IO.puts("    [INFO] Key com escopo session conseguiu listar peers (verificar se esperado)")
+          {:error, %Honchox.Error{status: 401}} -> IO.puts("    [PASS] Key com escopo session foi rejeitada ao listar peers (401)")
+          {:error, err} -> IO.puts("    [INFO] Erro: #{inspect(err)}")
         end
 
       {:error, err} ->
         IO.puts("    [SKIP] Não conseguiu criar key: #{inspect(err)}")
     end
-
-    # =====================================================================
-    # Resumo
-    # =====================================================================
 
     pass_count = Enum.count(results, &(&1 == :pass))
     fail_count = Enum.count(results, &(&1 == :fail))
@@ -209,48 +116,6 @@ defmodule TestKeys do
     else
       IO.puts("\nTodos os testes passaram.")
     end
-
-    # Cleanup
-    IO.puts("\n--- Cleanup: removendo workspace de teste ---")
-
-    case Honchox.Workspaces.delete(client, ws_id) do
-      {:ok, _} -> IO.puts("[OK] Workspace #{ws_id} removido")
-      {:error, err} -> IO.puts("[WARN] Falha ao remover workspace: #{inspect(err)}")
-    end
-  end
-
-  # Faz POST /v3/keys com query params
-  defp create_key(client, params) do
-    query =
-      params
-      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
-      |> Enum.map(fn
-        {:expires_at, %DateTime{} = dt} -> {"expires_at", DateTime.to_iso8601(dt)}
-        {k, v} -> {to_string(k), to_string(v)}
-      end)
-
-    path =
-      case query do
-        [] -> @base_path
-        _ -> "#{@base_path}?#{URI.encode_query(query)}"
-      end
-
-    # POST sem body — o endpoint espera query params, não JSON
-    Req.request(client.req, method: :post, url: path)
-    |> handle_response()
-  end
-
-  defp handle_response({:ok, %Req.Response{status: status, body: body}})
-       when status in 200..299 do
-    {:ok, body}
-  end
-
-  defp handle_response({:ok, %Req.Response{status: status, body: body}}) do
-    {:error, Honchox.Error.http_error(status, body)}
-  end
-
-  defp handle_response({:error, exception}) do
-    {:error, %Honchox.Error{message: inspect(exception), status: nil, kind: :transport}}
   end
 
   defp future_datetime do

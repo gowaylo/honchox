@@ -133,7 +133,7 @@ admin = Honchox.new(api_key: "sk-admin-key")
 )
 
 # Ready to use — no need to pass base_url or configure anything
-{:ok, peers} = Honchox.Peers.list(client, workspace_id: "my-workspace")
+{:ok, peers} = Honchox.peers(client)
 ```
 
 ## `api_key` vs `jwt`

@@ -65,15 +65,15 @@ defmodule Honchox.MixProject do
 
   defp groups_for_modules do
     [
-      Client: [Honchox],
+      Client: [Honchox, Honchox.Client],
       Resources: [
-        Honchox.Workspaces,
-        Honchox.Peers,
-        Honchox.Sessions,
+        Honchox.Workspace,
+        Honchox.Peer,
+        Honchox.Session,
+        Honchox.Conclusion,
+        Honchox.ConclusionScope,
         Honchox.Keys
       ],
-      "High-level": [Honchox.PeerWorkspaceQA],
-      "Legacy / Compat": [Honchox.Observations],
       Errors: [Honchox.Error]
     ]
   end

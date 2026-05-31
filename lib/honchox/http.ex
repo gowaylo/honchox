@@ -1,10 +1,5 @@
 defmodule Honchox.HTTP do
-  @moduledoc """
-  Stateless HTTP helpers for `Honchox.Client`.
-
-  This module wraps the configured `Req.Request` in a client and normalizes
-  successful responses and errors into the public Honchox return shape.
-  """
+  @moduledoc false
 
   alias Honchox.Client
 

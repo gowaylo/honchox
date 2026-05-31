@@ -50,128 +50,55 @@ client = Honchox.new(
 
 ### Client options
 
-| Option          | Default                                         | Description                                                                          |
-|-----------------|-------------------------------------------------|--------------------------------------------------------------------------------------|
-| `:api_key`      | `HONCHO_API_KEY` env var                        | Admin API key (required unless `:jwt`)                                               |
-| `:jwt`          | *(none)*                                        | Scoped JWT token (see [Scoped Keys](scoped-keys.html))                               |
-| `:base_url`     | `https://api.honcho.dev`                        | API base URL                                                                         |
-| `:workspace_id` | `HONCHO_WORKSPACE_ID` env var, then `"default"` | Stored on `%Honchox.Client{}`; resource calls still require `:workspace_id` today     |
-| `:timeout`      | `60_000`                                        | Receive timeout in ms                                                                |
-| `:max_retries`  | `2`                                             | Retries on transient failures                                                        |
+| Option          | Default                                         | Description                                      |
+|-----------------|-------------------------------------------------|--------------------------------------------------|
+| `:api_key`      | `HONCHO_API_KEY` env var                        | Admin API key (required unless `:jwt`)           |
+| `:jwt`          | *(none)*                                        | Scoped JWT token (see [Scoped Keys](scoped-keys.html)) |
+| `:base_url`     | `https://api.honcho.dev`                        | API base URL                                     |
+| `:workspace_id` | `HONCHO_WORKSPACE_ID` env var, then `"default"` | Workspace used by SDK-shaped resource helpers    |
+| `:timeout`      | `60_000`                                        | Receive timeout in ms                            |
+| `:max_retries`  | `2`                                             | Retries on transient failures                    |
 
-## Core concepts
+## Core workflow
 
-### Workspaces
-
-Workspaces are the top-level organizational unit. Every peer, session, and
-conclusion belongs to a workspace.
+SDK-shaped entry points start from a configured client and return resource
+structs that carry the client and workspace context forward:
 
 ```elixir
-# Create or get a workspace
-{:ok, workspace} = Honchox.Workspaces.get_or_create(client, "my-workspace",
-  metadata: %{team: "platform"}
-)
+client = Honchox.new(workspace_id: "my-workspace")
+
+{:ok, workspace} = Honchox.workspace(client)
+{:ok, alice} = Honchox.peer(client, "alice", metadata: %{role: "user"})
+{:ok, bot} = Honchox.peer(client, "bot")
+{:ok, session} = Honchox.session(client, "session-1", metadata: %{topic: "onboarding"})
+
+:ok = Honchox.Session.add_peers(session, [alice, bot])
+
+{:ok, _messages} =
+  Honchox.Session.add_messages(session, [
+    Honchox.Peer.message(alice, "Hello!"),
+    Honchox.Peer.message(bot, "Hi Alice! How can I help?")
+  ])
 ```
-
-### Peers
-
-Peers represent participants — users, agents, or any entity that interacts
-within a workspace.
-
-```elixir
-# Create or get a peer
-{:ok, peer} = Honchox.Peers.get_or_create(client, "alice",
-  workspace_id: "my-workspace",
-  metadata: %{role: "user"}
-)
-```
-
-### Sessions
-
-Sessions are conversation threads that contain messages and accumulate context.
-
-```elixir
-# Create a session
-{:ok, session} = Honchox.Sessions.get_or_create(client, "session-1",
-  workspace_id: "my-workspace",
-  metadata: %{topic: "onboarding"}
-)
-
-# Add messages
-{:ok, _msgs} = Honchox.Sessions.add_messages(client, "session-1", [
-  %{peer_id: "alice", content: "Hello!"},
-  %{peer_id: "bot", content: "Hi Alice! How can I help?"}
-], workspace_id: "my-workspace")
-```
-
-### Conclusions
-
-Conclusions are persistent observations about peers derived from conversations.
-
-```elixir
-# Create conclusions
-{:ok, _} = Honchox.Conclusions.create(client, [
-  %{
-    content: "Prefers step-by-step explanations",
-    observer_id: "bot",
-    observed_id: "alice"
-  }
-], workspace_id: "my-workspace")
-
-# Semantic search
-{:ok, results} = Honchox.Conclusions.query(client, "learning preferences",
-  workspace_id: "my-workspace",
-  top_k: 5
-)
-```
-
-## Workspace-scoped operations
-
-Most resource operations are scoped to a workspace. Pass the `:workspace_id`
-option on each call:
-
-```elixir
-# All of these require workspace_id
-Honchox.Peers.list(client, workspace_id: "my-workspace")
-Honchox.Sessions.list_messages(client, "session-1", workspace_id: "my-workspace")
-Honchox.Conclusions.list(client, workspace_id: "my-workspace")
-```
-
-> Omitting `:workspace_id` raises an `ArgumentError`.
 
 ## Context and representation
 
-One of Honcho's most powerful features is building context from accumulated
-conversations and conclusions:
+Use the resource structs for context, representation, and chat operations:
 
 ```elixir
-# Get session context (summaries + conclusions + search)
-{:ok, ctx} = Honchox.Sessions.context(client, "session-1",
-  workspace_id: "my-workspace",
-  search_query: "user preferences",
-  search_top_k: 5
-)
-
-# Get a peer's representation
-{:ok, repr} = Honchox.Peers.representation(client, "alice",
-  workspace_id: "my-workspace"
-)
-
-# Chat with full peer context
-{:ok, response} = Honchox.Peers.chat(client, "alice",
-  "What do you remember about our conversations?",
-  workspace_id: "my-workspace"
-)
+{:ok, ctx} = Honchox.Session.context(session, search_query: "user preferences")
+{:ok, repr} = Honchox.Peer.representation(alice)
+{:ok, response} = Honchox.Peer.chat(alice, "What do you remember about our conversations?")
 ```
 
 ## Error handling
 
-All functions return `{:ok, result}` or `{:error, %Honchox.Error{}}`:
+All API calls return `{:ok, result}` or `{:error, %Honchox.Error{}}`:
 
 ```elixir
-case Honchox.Peers.get_or_create(client, "alice", workspace_id: "ws") do
+case Honchox.peer(client, "alice") do
   {:ok, peer} ->
-    IO.puts("Peer created: #{peer["id"]}")
+    IO.puts("Peer ready: #{peer.id}")
 
   {:error, %Honchox.Error{kind: :http_error, status: 401}} ->
     IO.puts("Invalid API key")
@@ -192,14 +119,12 @@ scoped JWT keys from an admin client:
 ```elixir
 admin = Honchox.new()
 
-# Create a client restricted to one workspace, valid for 1 hour
 {:ok, scoped} = Honchox.Keys.create_client(admin,
   workspace_id: "my-workspace",
   expires_in: {1, :hour}
 )
 
-# This client can only access "my-workspace"
-{:ok, peers} = Honchox.Peers.list(scoped, workspace_id: "my-workspace")
+{:ok, peers} = Honchox.peers(scoped)
 ```
 
 See the [Scoped Keys](scoped-keys.html) guide for the full permission model

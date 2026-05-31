@@ -16,7 +16,7 @@ Add `honchox` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:honchox, "~> 0.2.0"}
+    {:honchox, "~> 0.3.0"}
   ]
 end
 ```
@@ -69,7 +69,7 @@ need agent tools:
 ```elixir
 def deps do
   [
-    {:honchox, "~> 0.2.0"},
+    {:honchox, "~> 0.3.0"},
     {:sagents, "~> 0.7"}
   ]
 end

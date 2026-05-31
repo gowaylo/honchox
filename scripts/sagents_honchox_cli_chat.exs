@@ -40,7 +40,7 @@ if "--help" in System.argv() or "-h" in System.argv() do
 end
 
 alias LangChain.ChatModels.ChatOpenAI
-alias LangChain.Message
+alias LangChain.{Function, Message}
 alias Sagents.{Agent, State}
 
 openrouter_key =
@@ -100,25 +100,150 @@ model =
     }
   })
 
+project_root = Path.expand("..", __DIR__)
+
+project_file_tool =
+  Function.new!(%{
+    name: "honchox_project_file",
+    description:
+      "Inspect the local Honchox project. Use it to list files, read source/docs, or grep for implementation details before answering project-specific questions.",
+    parameters_schema: %{
+      type: "object",
+      properties: %{
+        action: %{
+          type: "string",
+          enum: ["list", "read", "grep"],
+          description: "list files, read a file, or grep project text"
+        },
+        path: %{
+          type: "string",
+          description: "Relative file or directory path for list/read. Defaults to project root."
+        },
+        query: %{
+          type: "string",
+          description: "Search text for grep action"
+        },
+        limit: %{
+          type: "integer",
+          description: "Maximum entries/lines/results. Defaults to 80, max 200."
+        }
+      },
+      required: ["action"]
+    },
+    function: fn args, _context ->
+      action = Map.fetch!(args, "action")
+      limit = min(Map.get(args, "limit", 80), 200)
+      relative_path = Map.get(args, "path", ".")
+
+      safe_path = fn path ->
+        expanded = Path.expand(path, project_root)
+
+        if expanded == project_root or String.starts_with?(expanded, project_root <> "/") do
+          {:ok, expanded}
+        else
+          {:error, "Path escapes project root"}
+        end
+      end
+
+      case {action, safe_path.(relative_path)} do
+        {_, {:error, reason}} ->
+          {:error, reason}
+
+        {"list", {:ok, path}} ->
+          if File.dir?(path) do
+            entries =
+              path
+              |> File.ls!()
+              |> Enum.sort()
+              |> Enum.take(limit)
+
+            {:ok,
+             %{root: project_root, path: Path.relative_to(path, project_root), entries: entries}}
+          else
+            {:error, "Not a directory: #{relative_path}"}
+          end
+
+        {"read", {:ok, path}} ->
+          if File.regular?(path) do
+            content =
+              path
+              |> File.stream!([], :line)
+              |> Enum.take(limit)
+              |> Enum.join()
+
+            {:ok,
+             %{
+               path: Path.relative_to(path, project_root),
+               content: content,
+               truncated_to_lines: limit
+             }}
+          else
+            {:error, "Not a regular file: #{relative_path}"}
+          end
+
+        {"grep", {:ok, path}} ->
+          query = Map.get(args, "query") || ""
+
+          if query == "" do
+            {:error, "grep requires query"}
+          else
+            {output, _status} =
+              System.cmd(
+                "rg",
+                [
+                  "--line-number",
+                  "--fixed-strings",
+                  "--glob",
+                  "!deps/**",
+                  "--glob",
+                  "!_build/**",
+                  query,
+                  path
+                ],
+                stderr_to_stdout: true
+              )
+
+            results = output |> String.split("\n", trim: true) |> Enum.take(limit)
+            {:ok, %{query: query, results: results, truncated_to_results: limit}}
+          end
+
+        {other, _} ->
+          {:error, "Unknown action: #{inspect(other)}"}
+      end
+    end
+  })
+
 {:ok, agent} =
   Agent.new(
     %{
       agent_id: "honchox-sagents-cli-chat",
       model: model,
       base_system_prompt: """
-      You are a helpful CLI assistant with Honchox memory tools.
+      You are a personal technical assistant for the Honchox project.
+
+      Your job is to help Lucas understand, validate, and integrate Honchox:
+      - explain the public API and optional integrations;
+      - inspect the local Honchox code before answering implementation-specific questions;
+      - propose usage patterns, examples, and tests;
+      - use Honchox memory tools to remember project preferences and prior decisions.
+
+      Available tool groups:
+      - Honchox memory tools for semantic memory, conclusions, dreams, and queue status.
+      - honchox_project_file to inspect this local repository.
 
       Memory identity:
       - Your observer peer id is #{assistant_peer_id}.
       - The human/user observed peer id is #{user_peer_id}.
       - When searching or writing user memory, use observer_id=#{assistant_peer_id} and observed_id/target_id=#{user_peer_id}.
 
-      Use Honchox tools before answering questions that depend on prior context,
-      preferences, profile facts, or memories. Use manual conclusions for durable
-      facts the user explicitly asks you to remember. Be concise in the CLI.
+      Use honchox_project_file before answering questions about current source code,
+      module names, APIs, scripts, tests, docs, or integration details. Use Honchox
+      memory tools before answering questions that depend on prior context,
+      preferences, profile facts, or memories. Be concise in the CLI.
       """,
+      tools: [project_file_tool],
       middleware: [{Honchox.Sagents.Tools, client: client}],
-      max_runs: 10
+      max_runs: 12
     },
     replace_default_middleware: true
   )
@@ -126,11 +251,12 @@ model =
 state = State.new!(%{messages: []})
 
 IO.puts("""
-Honchox Sagents CLI chat
+Honchox project assistant CLI chat
 Workspace: #{workspace_id}
 Model: #{model_name}
 Assistant peer: #{assistant_peer_id}
 User peer: #{user_peer_id}
+Project root: #{project_root}
 Type /help for commands, /exit to quit.
 """)
 

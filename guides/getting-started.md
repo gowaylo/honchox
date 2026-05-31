@@ -117,6 +117,28 @@ case Honchox.peer(client, "alice") do
 end
 ```
 
+## Multi-tenant server-side clients
+
+For server-side agents in a multi-tenant application, keep the admin API key on
+your server and create a client with the tenant's workspace ID for each tenant
+context:
+
+```elixir
+admin_api_key = System.fetch_env!("HONCHO_API_KEY")
+
+tenant_client =
+  Honchox.new(
+    api_key: admin_api_key,
+    workspace_id: "tenant_acme"
+  )
+
+{:ok, agent} = Honchox.peer(tenant_client, "support-agent")
+{:ok, session} = Honchox.session(tenant_client, "conversation-main")
+```
+
+See [Server-side multi-workspace clients](server-side-multi-workspace-clients.html)
+for the full pattern.
+
 ## Scoped keys
 
 If you need to delegate limited access (e.g. to a frontend), you can create
@@ -140,4 +162,5 @@ and usage patterns.
 
 - Browse the [API Reference](api-reference.html) for all available functions
 - Check the [Cheatsheet](cheatsheet.html) for a quick reference card
+- Read [Server-side multi-workspace clients](server-side-multi-workspace-clients.html) for multi-tenant server-side agents
 - Read the [Scoped Keys](scoped-keys.html) guide for delegated authentication

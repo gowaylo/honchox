@@ -59,6 +59,7 @@ defmodule Honchox.MixProject do
       "README.md",
       "guides/getting-started.md",
       "guides/scoped-keys.md",
+      "docs/server-side-multi-workspace-clients.md",
       "guides/cheatsheet.cheatmd"
     ]
   end
@@ -81,7 +82,7 @@ defmodule Honchox.MixProject do
   defp groups_for_extras do
     [
       Introduction: ["README.md", "guides/getting-started.md"],
-      Guides: ["guides/scoped-keys.md"],
+      Guides: ["guides/scoped-keys.md", "docs/server-side-multi-workspace-clients.md"],
       Reference: ["guides/cheatsheet.cheatmd"]
     ]
   end

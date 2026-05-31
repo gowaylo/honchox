@@ -26,3 +26,5 @@ honchox-*.tar
 
 # Generated progress/scratch markdown — do not commit
 progress.md
+# Local planning/context files (not published or committed)
+/plans/

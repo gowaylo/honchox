@@ -1,14 +1,10 @@
 # Interactive Sagents + Honchox CLI chat.
 #
 # Usage:
-#   OPENROUTER_API_KEY=... HONCHO_API_KEY=... mix run scripts/sagents_honchox_cli_chat.exs
+#   mix run scripts/sagents_honchox_cli_chat.exs
 #
-# Optional env:
-#   OPENROUTER_MODEL=deepseek/deepseek-v4-flash
-#   HONCHO_WORKSPACE_ID=my-workspace
-#   HONCHO_ASSISTANT_PEER_ID=assistant
-#   HONCHO_USER_PEER_ID=user
-#   HONCHO_URL=https://api.honcho.dev
+# The script loads .env automatically. It expects OPENROUTER_API_KEY and
+# HONCHO_API_KEY to be available from .env or the shell.
 #
 # Commands inside the chat:
 #   /help                         Show commands
@@ -21,19 +17,11 @@ if "--help" in System.argv() or "-h" in System.argv() do
   IO.puts("""
   Interactive Sagents + Honchox CLI chat
 
-  Required env:
-    OPENROUTER_API_KEY
-    HONCHO_API_KEY
-
-  Optional env:
-    OPENROUTER_MODEL=deepseek/deepseek-v4-flash
-    HONCHO_WORKSPACE_ID=honchox-sagents-cli
-    HONCHO_ASSISTANT_PEER_ID=assistant
-    HONCHO_USER_PEER_ID=user
-    HONCHO_URL=https://api.honcho.dev
-
   Run:
     mix run scripts/sagents_honchox_cli_chat.exs
+
+  The script loads .env automatically. OPENROUTER_API_KEY and HONCHO_API_KEY
+  should be present there or in the shell.
   """)
 
   System.halt(0)
@@ -42,6 +30,10 @@ end
 alias LangChain.ChatModels.ChatOpenAI
 alias LangChain.{Function, Message}
 alias Sagents.{Agent, State}
+
+if Code.ensure_loaded?(Dotenvy) do
+  Dotenvy.source([".env", System.get_env()], require_files: false)
+end
 
 openrouter_key =
   System.get_env("OPENROUTER_API_KEY") ||
@@ -53,8 +45,8 @@ honcho_key =
 
 model_name = System.get_env("OPENROUTER_MODEL") || "deepseek/deepseek-v4-flash"
 workspace_id = System.get_env("HONCHO_WORKSPACE_ID") || "honchox-sagents-cli"
-assistant_peer_id = System.get_env("HONCHO_ASSISTANT_PEER_ID") || "assistant"
-user_peer_id = System.get_env("HONCHO_USER_PEER_ID") || "user"
+assistant_peer_id = "honchox-project-assistant"
+default_user_peer_id = "current-cli-user"
 honcho_url = System.get_env("HONCHO_URL") || "https://api.honcho.dev"
 
 client =
@@ -71,11 +63,6 @@ with {:ok, _workspace} <- Honchox.workspace(client),
        Honchox.peer(client, assistant_peer_id,
          metadata: %{role: "assistant", source: "sagents_cli"},
          configuration: %{observe_me: false}
-       ),
-     {:ok, _user_peer} <-
-       Honchox.peer(client, user_peer_id,
-         metadata: %{role: "user", source: "sagents_cli"},
-         configuration: %{observe_me: true}
        ) do
   :ok
 else
@@ -233,8 +220,12 @@ project_file_tool =
 
       Memory identity:
       - Your observer peer id is #{assistant_peer_id}.
-      - The human/user observed peer id is #{user_peer_id}.
-      - When searching or writing user memory, use observer_id=#{assistant_peer_id} and observed_id/target_id=#{user_peer_id}.
+      - Do not assume who the human is. On the first interaction of a new CLI
+        session, ask how the user wants to be identified for Honchox memory.
+      - Until the user gives an identity, use observed_id/target_id=#{default_user_peer_id}
+        only for generic session memory.
+      - After the user tells you their name/handle/preferred identity, use a
+        simple stable peer id derived from it when calling Honchox memory tools.
 
       Use honchox_project_file before answering questions about current source code,
       module names, APIs, scripts, tests, docs, or integration details. Use Honchox
@@ -255,7 +246,7 @@ Honchox project assistant CLI chat
 Workspace: #{workspace_id}
 Model: #{model_name}
 Assistant peer: #{assistant_peer_id}
-User peer: #{user_peer_id}
+Default memory peer: #{default_user_peer_id} until you tell the agent who you are
 Project root: #{project_root}
 Type /help for commands, /exit to quit.
 """)
@@ -278,8 +269,8 @@ loop = fn loop, state ->
     String.trim(input) == "/help" ->
       IO.puts("""
       Commands:
-        /remember <text>   Store a manual Honcho conclusion about you
-        /context [query]   Show Honcho context about you
+        /remember <text>   Store a manual Honcho conclusion under the default CLI user
+        /context [query]   Show Honcho context for the default CLI user
         /queue             Show Honcho async queue status
         /exit              Quit
       """)
@@ -292,7 +283,7 @@ loop = fn loop, state ->
       with {:ok, assistant_peer} <- Honchox.peer(client, assistant_peer_id),
            {:ok, conclusions} <-
              assistant_peer
-             |> Honchox.Peer.conclusions_of(user_peer_id)
+             |> Honchox.Peer.conclusions_of(default_user_peer_id)
              |> Honchox.ConclusionScope.create(memory) do
         IO.puts("stored #{length(conclusions)} conclusion(s)")
       else
@@ -306,8 +297,8 @@ loop = fn loop, state ->
 
       opts =
         if query == "",
-          do: [target: user_peer_id],
-          else: [target: user_peer_id, search_query: query]
+          do: [target: default_user_peer_id],
+          else: [target: default_user_peer_id, search_query: query]
 
       with {:ok, assistant_peer} <- Honchox.peer(client, assistant_peer_id),
            {:ok, context} <- Honchox.Peer.context(assistant_peer, opts) do
@@ -319,7 +310,7 @@ loop = fn loop, state ->
       loop.(loop, state)
 
     String.trim(input) == "/queue" ->
-      case Honchox.queue_status(client, observer: assistant_peer_id, sender: user_peer_id) do
+      case Honchox.queue_status(client, observer: assistant_peer_id, sender: default_user_peer_id) do
         {:ok, status} -> IO.inspect(status, label: "queue", pretty: true)
         {:error, error} -> IO.puts("queue failed: #{inspect(error, pretty: true)}")
       end
@@ -337,7 +328,7 @@ loop = fn loop, state ->
                 Message.new_user!("""
                 #{user_text}
 
-                Memory routing hint: if you use Honchox tools, observer_id is #{assistant_peer_id} and target/observed peer is #{user_peer_id}.
+                Memory routing hint: if you use Honchox tools, observer_id is #{assistant_peer_id}. If you do not yet know who the user is, ask them how they want to be identified and use target/observed peer #{default_user_peer_id} only for generic CLI-session memory.
                 """)
               ]
       }

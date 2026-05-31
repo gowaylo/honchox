@@ -126,6 +126,98 @@ defmodule Honchox.EntryPointsTest do
     assert [%Honchox.Peer{id: "alice", workspace_id: "workspace-1", client: ^client}] = page.items
   end
 
+  test "queue_status/2 ensures workspace and returns workspace queue status" do
+    client = client()
+
+    expect_workspace_ensure()
+
+    Req.Test.expect(HonchoxEntryPointsStub, fn conn ->
+      assert conn.method == "GET"
+      assert conn.request_path == "/v3/workspaces/workspace-1/queue/status"
+
+      assert URI.decode_query(conn.query_string) == %{
+               "observer_id" => "bot",
+               "sender_id" => "alice",
+               "session_id" => "session-1"
+             }
+
+      Req.Test.json(conn, %{
+        "total_work_units" => 3,
+        "pending_work_units" => 1,
+        "in_progress_work_units" => 1,
+        "completed_work_units" => 1,
+        "sessions" => %{
+          "session-1" => %{
+            "session_id" => "session-1",
+            "total_work_units" => 3,
+            "pending_work_units" => 1
+          }
+        }
+      })
+    end)
+
+    observer = %Honchox.Peer{id: "bot"}
+    sender = %Honchox.Peer{id: "alice"}
+    session = %Honchox.Session{id: "session-1"}
+
+    assert {:ok,
+            %Honchox.QueueStatus{
+              total_work_units: 3,
+              pending_work_units: 1,
+              in_progress_work_units: 1,
+              completed_work_units: 1,
+              sessions: %{"session-1" => %{"session_id" => "session-1"}}
+            }} =
+             Honchox.queue_status(client, observer: observer, sender: sender, session: session)
+  end
+
+  test "schedule_dream/3 ensures workspace and schedules an omni dream" do
+    client = client()
+
+    expect_workspace_ensure()
+
+    Req.Test.expect(HonchoxEntryPointsStub, fn conn ->
+      assert conn.method == "POST"
+      assert conn.request_path == "/v3/workspaces/workspace-1/schedule_dream"
+
+      assert conn.body_params == %{
+               "observer" => "bot",
+               "observed" => "alice",
+               "session_id" => "session-1",
+               "dream_type" => "omni"
+             }
+
+      Req.Test.json(conn, %{})
+    end)
+
+    observer = %Honchox.Peer{id: "bot"}
+    observed = %Honchox.Peer{id: "alice"}
+    session = %Honchox.Session{id: "session-1"}
+
+    assert :ok = Honchox.schedule_dream(client, observer, observed: observed, session: session)
+  end
+
+  test "schedule_dream/2 defaults observed to observer" do
+    client = client()
+
+    expect_workspace_ensure()
+
+    Req.Test.expect(HonchoxEntryPointsStub, fn conn ->
+      assert conn.method == "POST"
+      assert conn.request_path == "/v3/workspaces/workspace-1/schedule_dream"
+
+      assert conn.body_params == %{
+               "observer" => "alice",
+               "observed" => "alice",
+               "dream_type" => "omni"
+             }
+
+      Req.Test.json(conn, %{})
+    end)
+
+    assert :ok = Honchox.schedule_dream(client, "alice")
+  end
+
   test "sessions/2 ensures workspace and returns a page of session structs" do
     client = client()
 

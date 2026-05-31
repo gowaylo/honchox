@@ -29,3 +29,6 @@ progress.md
 # Local planning/context files (not published or committed)
 /plans/
 .handoff
+
+# Local reference documentation
+/references/

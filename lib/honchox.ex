@@ -92,6 +92,54 @@ defmodule Honchox do
   end
 
   @doc """
+  Returns queue status for the client's configured workspace.
+
+  Accepts optional `:observer`, `:sender`, and `:session` filters as IDs or
+  resource structs.
+  """
+  @spec queue_status(t(), keyword() | map()) ::
+          {:ok, Honchox.QueueStatus.t()} | {:error, Honchox.Error.t()}
+  def queue_status(%Honchox.Client{} = client, opts \\ []) do
+    opts = normalize_queue_opts(opts)
+
+    with {:ok, %Honchox.Workspace{}} <- workspace(client),
+         {:ok, data} <- Honchox.API.Workspaces.queue_status(client, opts) do
+      {:ok, Honchox.QueueStatus.from_api(data)}
+    end
+  end
+
+  @doc """
+  Manually schedules a dream for a peer representation.
+
+  Dreams consolidate existing conclusions for an `(observer, observed)` peer
+  pair. `observer` can be a peer struct or ID. Pass `:observed` to schedule a
+  dream for what the observer knows about another peer; otherwise the observed
+  peer defaults to the observer. Pass `:session` to scope the dream to a session.
+
+  The API schedules work asynchronously; it does not wait for the dream to be
+  processed.
+  """
+  @spec schedule_dream(t(), Honchox.Peer.t() | String.t(), keyword() | map()) ::
+          :ok | {:error, Honchox.Error.t()}
+  def schedule_dream(%Honchox.Client{} = client, observer, opts \\ []) do
+    observer_id = peer_id(observer)
+
+    opts =
+      opts
+      |> Honchox.API.Helpers.opts_to_map()
+      |> Map.put(:observer_id, observer_id)
+      |> Map.update(:observed, observer_id, &peer_id/1)
+      |> Map.update(:session, nil, &session_id/1)
+      |> rename(:observed, :observed_id)
+      |> rename(:session, :session_id)
+
+    with {:ok, %Honchox.Workspace{}} <- workspace(client),
+         {:ok, _data} <- Honchox.API.Workspaces.schedule_dream(client, opts) do
+      :ok
+    end
+  end
+
+  @doc """
   Ensures the client's workspace and creates or returns a peer in it.
   """
   @spec peer(t(), String.t(), keyword() | map()) ::
@@ -137,6 +185,30 @@ defmodule Honchox do
          {:ok, data} <- Honchox.API.Sessions.list(client, opts) do
       {:ok,
        Honchox.Page.from_api(data, &Honchox.Session.from_api(client, client.workspace_id, &1))}
+    end
+  end
+
+  defp normalize_queue_opts(opts) do
+    opts
+    |> Honchox.API.Helpers.opts_to_map()
+    |> Map.update(:observer, nil, &peer_id/1)
+    |> Map.update(:sender, nil, &peer_id/1)
+    |> Map.update(:session, nil, &session_id/1)
+    |> rename(:observer, :observer_id)
+    |> rename(:sender, :sender_id)
+    |> rename(:session, :session_id)
+  end
+
+  defp peer_id(%Honchox.Peer{id: id}), do: id
+  defp peer_id(value), do: value
+
+  defp session_id(%Honchox.Session{id: id}), do: id
+  defp session_id(value), do: value
+
+  defp rename(opts, from, to) do
+    case Map.pop(opts, from) do
+      {nil, opts} -> opts
+      {value, opts} -> Map.put(opts, to, value)
     end
   end
 end

@@ -310,20 +310,32 @@ defmodule Honchox.QueueStatus do
   Public queue status converted from Honcho API responses.
   """
 
-  defstruct [:total_work_units, :pending_work_units]
+  defstruct [
+    :total_work_units,
+    :pending_work_units,
+    :in_progress_work_units,
+    :completed_work_units,
+    :sessions
+  ]
 
   import Honchox.API.Helpers, only: [opt: 2]
 
   @type t :: %__MODULE__{
           total_work_units: integer() | nil,
-          pending_work_units: integer() | nil
+          pending_work_units: integer() | nil,
+          in_progress_work_units: integer() | nil,
+          completed_work_units: integer() | nil,
+          sessions: map() | nil
         }
 
   @spec from_api(map()) :: t()
   def from_api(data) when is_map(data) do
     %__MODULE__{
       total_work_units: opt(data, :total_work_units),
-      pending_work_units: opt(data, :pending_work_units)
+      pending_work_units: opt(data, :pending_work_units),
+      in_progress_work_units: opt(data, :in_progress_work_units),
+      completed_work_units: opt(data, :completed_work_units),
+      sessions: opt(data, :sessions)
     }
   end
 end

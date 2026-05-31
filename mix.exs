@@ -31,6 +31,7 @@ defmodule Honchox.MixProject do
     [
       {:req, "~> 0.5"},
       {:jason, "~> 1.4"},
+      {:sagents, "~> 0.7", optional: true},
       {:plug, "~> 1.0", only: :test},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false}
     ]
@@ -75,6 +76,7 @@ defmodule Honchox.MixProject do
         Honchox.ConclusionScope,
         Honchox.Keys
       ],
+      Integrations: [Honchox.Sagents.Tools],
       Errors: [Honchox.Error]
     ]
   end

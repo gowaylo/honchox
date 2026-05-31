@@ -58,6 +58,35 @@ primary public domain values are structs and helper functions such as
 | `Honchox.ConclusionScope` | Scoped conclusion CRUD and semantic search |
 | `Honchox.Keys` | Scoped JWT creation and delegated authentication |
 | `Honchox.Error` | Structured error with kind, status, and body |
+| `Honchox.Sagents.Tools` | Optional Sagents middleware exposing agent memory tools |
+
+## Optional Sagents tools
+
+Honchox can expose its most useful conversation-memory operations as Sagents
+middleware without changing the core client API. Add Sagents in applications that
+need agent tools:
+
+```elixir
+def deps do
+  [
+    {:honchox, "~> 0.2.0"},
+    {:sagents, "~> 0.7"}
+  ]
+end
+```
+
+Then register the middleware with an existing client or `Honchox.new/1` options:
+
+```elixir
+middleware = [
+  {Honchox.Sagents.Tools, client_opts: [workspace_id: "my-workspace"]}
+]
+```
+
+The initial tool set covers semantic message search, peer context, manual
+conclusion creation, dream scheduling, and queue-status inspection. Dream
+scheduling only enqueues asynchronous Honcho work; use manual conclusions for
+deterministic memory during a conversation.
 
 ## Configuration
 

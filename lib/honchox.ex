@@ -16,11 +16,11 @@ defmodule Honchox do
   The base URL defaults to `https://api.honcho.dev` and can be overridden via
   the `:base_url` option or the `HONCHO_URL` environment variable.
 
-  ## SDK-shaped resources
+  ## Resources
 
   Most resource endpoints are scoped to a workspace. The client stores a
   workspace ID from `:workspace_id`, `HONCHO_WORKSPACE_ID`, or `"default"` as
-  client configuration and SDK-shaped entry points return structs:
+  client configuration and entry points return structs:
 
       {:ok, peer} = Honchox.peer(client, "alice")
       {:ok, response} = Honchox.Peer.chat(peer, "What was our last topic?")

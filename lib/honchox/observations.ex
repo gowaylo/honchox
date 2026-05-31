@@ -1,1 +1,1 @@
-# Legacy Honchox.Observations wrappers were removed because observations are not part of the SDK-shaped public API.
+# Legacy Honchox.Observations wrappers were removed because observations are not part of the public API.

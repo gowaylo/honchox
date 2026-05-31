@@ -1,6 +1,6 @@
 defmodule Honchox.Client do
   @moduledoc """
-  Immutable SDK client configuration.
+  Immutable client configuration.
 
   `Honchox.Client` stores authentication, workspace, base URL, timeout, retry,
   and the preconfigured `Req.Request` used for HTTP calls. It is stateless:

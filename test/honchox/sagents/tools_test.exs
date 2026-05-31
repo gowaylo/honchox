@@ -23,6 +23,43 @@ defmodule Honchox.Sagents.ToolsTest do
     assert "honchox_queue_status" in names
   end
 
+  test "supports only and except tool selection options" do
+    client = client()
+
+    assert {:ok, only_config} =
+             Honchox.Sagents.Tools.init(
+               client: client,
+               only: [:search_messages, "honchox_get_peer_context"]
+             )
+
+    assert only_config |> Honchox.Sagents.Tools.tools() |> Enum.map(& &1.name) == [
+             "honchox_search_messages",
+             "honchox_get_peer_context"
+           ]
+
+    assert {:ok, except_config} =
+             Honchox.Sagents.Tools.init(
+               client: client,
+               except: [:schedule_dream, "honchox_queue_status"]
+             )
+
+    names = except_config |> Honchox.Sagents.Tools.tools() |> Enum.map(& &1.name)
+
+    refute "honchox_schedule_dream" in names
+    refute "honchox_queue_status" in names
+    assert "honchox_search_messages" in names
+    assert "honchox_get_peer_context" in names
+    assert "honchox_create_conclusions" in names
+  end
+
+  test "rejects invalid tool selection options" do
+    assert {:error, {:unknown_tools, [:missing_tool]}} =
+             Honchox.Sagents.Tools.init(client: client(), only: [:missing_tool])
+
+    assert {:error, :cannot_use_only_and_except_together} =
+             Honchox.Sagents.Tools.init(client: client(), only: [:search_messages], except: [])
+  end
+
   test "honchox_search_messages searches memory for an observer peer" do
     client = client()
     {:ok, config} = Honchox.Sagents.Tools.init(client: client)

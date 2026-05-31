@@ -12,10 +12,20 @@ defmodule Honchox.Sagents.Tools do
 
   alias LangChain.Function
 
+  @tool_specs [
+    search_messages: {"honchox_search_messages", &__MODULE__.search_messages_tool/1},
+    get_peer_context: {"honchox_get_peer_context", &__MODULE__.get_peer_context_tool/1},
+    create_conclusions: {"honchox_create_conclusions", &__MODULE__.create_conclusions_tool/1},
+    schedule_dream: {"honchox_schedule_dream", &__MODULE__.schedule_dream_tool/1},
+    queue_status: {"honchox_queue_status", &__MODULE__.queue_status_tool/1}
+  ]
+
   @impl true
   def init(opts) when is_list(opts) do
-    client = Keyword.get(opts, :client) || Honchox.new(Keyword.get(opts, :client_opts, []))
-    {:ok, %{client: client}}
+    with {:ok, selected_tools} <- selected_tools(opts) do
+      client = Keyword.get(opts, :client) || Honchox.new(Keyword.get(opts, :client_opts, []))
+      {:ok, %{client: client, selected_tools: selected_tools}}
+    end
   end
 
   @impl true
@@ -29,16 +39,15 @@ defmodule Honchox.Sagents.Tools do
 
   @impl true
   def tools(config) do
-    [
-      search_messages_tool(config),
-      get_peer_context_tool(config),
-      create_conclusions_tool(config),
-      schedule_dream_tool(config),
-      queue_status_tool(config)
-    ]
+    config
+    |> Map.get(:selected_tools, Keyword.keys(@tool_specs))
+    |> Enum.map(fn tool ->
+      {_name, builder} = Keyword.fetch!(@tool_specs, tool)
+      builder.(config)
+    end)
   end
 
-  defp search_messages_tool(config) do
+  def search_messages_tool(config) do
     Function.new!(%{
       name: "honchox_search_messages",
       description: "Search prior Honcho messages from an observer peer's perspective.",
@@ -56,7 +65,7 @@ defmodule Honchox.Sagents.Tools do
     })
   end
 
-  defp get_peer_context_tool(config) do
+  def get_peer_context_tool(config) do
     Function.new!(%{
       name: "honchox_get_peer_context",
       description: "Get a peer's Honcho representation, card, and relevant conclusions.",
@@ -74,7 +83,7 @@ defmodule Honchox.Sagents.Tools do
     })
   end
 
-  defp create_conclusions_tool(config) do
+  def create_conclusions_tool(config) do
     Function.new!(%{
       name: "honchox_create_conclusions",
       description: "Write deterministic Honcho conclusions for an observer/observed peer pair.",
@@ -103,7 +112,7 @@ defmodule Honchox.Sagents.Tools do
     })
   end
 
-  defp schedule_dream_tool(config) do
+  def schedule_dream_tool(config) do
     Function.new!(%{
       name: "honchox_schedule_dream",
       description: "Schedule asynchronous Honcho dream consolidation for a peer representation.",
@@ -120,7 +129,7 @@ defmodule Honchox.Sagents.Tools do
     })
   end
 
-  defp queue_status_tool(config) do
+  def queue_status_tool(config) do
     Function.new!(%{
       name: "honchox_queue_status",
       description:
@@ -135,6 +144,52 @@ defmodule Honchox.Sagents.Tools do
       },
       function: fn args, _context -> queue_status(args, config) end
     })
+  end
+
+  defp selected_tools(opts) do
+    only = Keyword.get(opts, :only)
+    except = Keyword.get(opts, :except)
+
+    cond do
+      not is_nil(only) and not is_nil(except) ->
+        {:error, :cannot_use_only_and_except_together}
+
+      not is_nil(only) ->
+        normalize_tool_selection(only)
+
+      not is_nil(except) ->
+        with {:ok, except_tools} <- normalize_tool_selection(except) do
+          {:ok, Keyword.keys(@tool_specs) -- except_tools}
+        end
+
+      true ->
+        {:ok, Keyword.keys(@tool_specs)}
+    end
+  end
+
+  defp normalize_tool_selection(tools) do
+    normalized = tools |> List.wrap() |> Enum.map(&normalize_tool_name/1)
+    known = Keyword.keys(@tool_specs)
+    unknown = Enum.reject(normalized, &(&1 in known))
+
+    case unknown do
+      [] -> {:ok, normalized}
+      _ -> {:error, {:unknown_tools, unknown}}
+    end
+  end
+
+  defp normalize_tool_name(name) when is_atom(name), do: name
+
+  defp normalize_tool_name("honchox_" <> rest) do
+    rest |> String.to_existing_atom()
+  rescue
+    ArgumentError -> String.to_atom(rest)
+  end
+
+  defp normalize_tool_name(name) when is_binary(name) do
+    String.to_existing_atom(name)
+  rescue
+    ArgumentError -> String.to_atom(name)
   end
 
   defp search_messages(%{"observer_id" => observer_id, "query" => query} = args, %{client: client}) do

@@ -84,9 +84,19 @@ middleware = [
 ```
 
 The initial tool set covers semantic message search, peer context, manual
-conclusion creation, dream scheduling, and queue-status inspection. Dream
-scheduling only enqueues asynchronous Honcho work; use manual conclusions for
-deterministic memory during a conversation.
+conclusion creation, dream scheduling, and queue-status inspection. You can load
+only part of the tool set with `:only` or remove tools with `:except`:
+
+```elixir
+{Honchox.Sagents.Tools,
+ client_opts: [workspace_id: "my-workspace"],
+ except: [:schedule_dream, :queue_status]}
+```
+
+Tool selectors accept short atoms such as `:search_messages` or full tool names
+such as `"honchox_search_messages"`. Dream scheduling only enqueues asynchronous
+Honcho work; use manual conclusions for deterministic memory during a
+conversation.
 
 ## Configuration
 

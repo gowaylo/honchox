@@ -23,3 +23,6 @@ erl_crash.dump
 honchox-*.tar
 
 .env
+
+# Generated progress/scratch markdown — do not commit
+progress.md

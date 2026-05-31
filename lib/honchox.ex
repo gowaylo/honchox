@@ -96,6 +96,66 @@ defmodule Honchox do
   end
 
   @doc """
+  Ensures the client's configured workspace exists.
+  """
+  @spec workspace(t(), keyword() | map()) ::
+          {:ok, Honchox.Workspace.t()} | {:error, Honchox.Error.t()}
+  def workspace(%Honchox.Client{} = client, opts \\ []) do
+    with {:ok, data} <- Honchox.API.Workspaces.get_or_create(client, client.workspace_id, opts) do
+      {:ok, Honchox.Workspace.from_api(client, data)}
+    end
+  end
+
+  @doc """
+  Ensures the client's workspace and creates or returns a peer in it.
+  """
+  @spec peer(t(), String.t(), keyword() | map()) ::
+          {:ok, Honchox.Peer.t()} | {:error, Honchox.Error.t()}
+  def peer(%Honchox.Client{} = client, id, opts \\ []) do
+    with {:ok, %Honchox.Workspace{}} <- workspace(client),
+         {:ok, data} <- Honchox.API.Peers.get_or_create(client, id, opts) do
+      {:ok, Honchox.Peer.from_api(client, client.workspace_id, data)}
+    end
+  end
+
+  @doc """
+  Ensures the client's workspace and lists peers in it.
+  """
+  @spec peers(t(), keyword() | map()) ::
+          {:ok, Honchox.Page.t(Honchox.Peer.t())} | {:error, Honchox.Error.t()}
+  def peers(%Honchox.Client{} = client, opts \\ []) do
+    with {:ok, %Honchox.Workspace{}} <- workspace(client),
+         {:ok, data} <- Honchox.API.Peers.list(client, opts) do
+      {:ok, Honchox.Page.from_api(data, &Honchox.Peer.from_api(client, client.workspace_id, &1))}
+    end
+  end
+
+  @doc """
+  Ensures the client's workspace and creates or returns a session in it.
+  """
+  @spec session(t(), String.t(), keyword() | map()) ::
+          {:ok, Honchox.Session.t()} | {:error, Honchox.Error.t()}
+  def session(%Honchox.Client{} = client, id, opts \\ []) do
+    with {:ok, %Honchox.Workspace{}} <- workspace(client),
+         {:ok, data} <- Honchox.API.Sessions.get_or_create(client, id, opts) do
+      {:ok, Honchox.Session.from_api(client, client.workspace_id, data)}
+    end
+  end
+
+  @doc """
+  Ensures the client's workspace and lists sessions in it.
+  """
+  @spec sessions(t(), keyword() | map()) ::
+          {:ok, Honchox.Page.t(Honchox.Session.t())} | {:error, Honchox.Error.t()}
+  def sessions(%Honchox.Client{} = client, opts \\ []) do
+    with {:ok, %Honchox.Workspace{}} <- workspace(client),
+         {:ok, data} <- Honchox.API.Sessions.list(client, opts) do
+      {:ok,
+       Honchox.Page.from_api(data, &Honchox.Session.from_api(client, client.workspace_id, &1))}
+    end
+  end
+
+  @doc """
   Sends a GET request to the given `path` with optional query `params`.
 
   Returns `{:ok, body}` on success or `{:error, %Honchox.Error{}}` on failure.

@@ -9,6 +9,10 @@ client = Honchox.new(
 )
 ```
 
+The Honchox client is stateless and immutable. Use maps for metadata,
+configuration, filters, and internal raw payloads; primary public domain values
+are structs and SDK helpers.
+
 ## Workspace
 
 ```elixir
@@ -32,9 +36,12 @@ client = Honchox.new(
 {:ok, session} = Honchox.session(client, "session-1", metadata: %{topic: "onboarding"})
 {:ok, page} = Honchox.sessions(client, page: 1, size: 50)
 
+{:ok, alice} = Honchox.peer(client, "alice")
+{:ok, bot} = Honchox.peer(client, "bot")
+
 {:ok, _messages} = Honchox.Session.add_messages(session, [
-  %{peer_id: "alice", content: "Hello!"},
-  %{peer_id: "bot", content: "Hi!"}
+  Honchox.Peer.message(alice, "Hello!"),
+  Honchox.Peer.message(bot, "Hi!")
 ])
 
 {:ok, messages} = Honchox.Session.messages(session, page: 1, size: 50, reverse: true)

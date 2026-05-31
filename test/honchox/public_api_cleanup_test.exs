@@ -77,6 +77,50 @@ defmodule Honchox.PublicAPICleanupTest do
     end)
   end
 
+  test "public README and guide examples prefer struct-first message values" do
+    paths = ["README.md", "guides/getting-started.md", "guides/cheatsheet.cheatmd"]
+
+    Enum.each(paths, fn path ->
+      text = File.read!(path)
+
+      refute text =~ "%{peer_id:",
+             "expected #{path} examples to build messages with Honchox.Peer.message/3 instead of raw peer_id maps"
+    end)
+
+    assert File.read!("README.md") =~ "Honchox.Peer.message",
+           "expected README quick start to show the SDK-shaped message helper"
+
+    assert File.read!("guides/cheatsheet.cheatmd") =~ "Honchox.Peer.message",
+           "expected cheatsheet message examples to show the SDK-shaped message helper"
+  end
+
+  test "public docs describe the stateless client and map boundaries" do
+    public_docs =
+      ["README.md", "guides/getting-started.md", "guides/cheatsheet.cheatmd"]
+      |> Enum.map(&File.read!/1)
+      |> Enum.join("\n")
+      |> String.downcase()
+
+    assert public_docs =~ "stateless",
+           "expected public docs to say the Honchox client is stateless"
+
+    assert public_docs =~ "immutable",
+           "expected public docs to say the Honchox client is immutable"
+
+    for phrase <- ["metadata", "configuration", "filters", "internal", "primary public domain"] do
+      assert public_docs =~ phrase,
+             "expected public docs to explain map boundaries, including #{inspect(phrase)}"
+    end
+  end
+
+  test "public docs do not contain stale Task 10 examples or module-doc claims" do
+    refute File.read!("guides/getting-started.md") =~ "~> 0.1.0",
+           "expected Getting Started dependency example to match the current SDK release line"
+
+    refute File.read!("lib/honchox.ex") =~ "Resource calls still require :workspace_id today",
+           "expected Honchox moduledoc not to claim resource calls still require per-call workspace_id"
+  end
+
   test "raw HTTP helper is hidden from the public documentation surface" do
     assert {:module, Honchox.HTTP} = Code.ensure_loaded(Honchox.HTTP)
     assert {:docs_v1, _, _, _, moduledoc, _, _} = Code.fetch_docs(Honchox.HTTP)

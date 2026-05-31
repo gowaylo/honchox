@@ -27,16 +27,25 @@ end
 client = Honchox.new(workspace_id: "my-workspace")
 
 {:ok, workspace} = Honchox.workspace(client)
-{:ok, peer} = Honchox.peer(client, "alice", metadata: %{role: "user"})
+{:ok, alice} = Honchox.peer(client, "alice", metadata: %{role: "user"})
+{:ok, bot} = Honchox.peer(client, "bot")
 {:ok, session} = Honchox.session(client, "session-1", metadata: %{topic: "onboarding"})
 
 {:ok, _messages} = Honchox.Session.add_messages(session, [
-  %{peer_id: peer.id, content: "Hello!"},
-  %{peer_id: "bot", content: "Hi Alice, how can I help?"}
+  Honchox.Peer.message(alice, "Hello!"),
+  Honchox.Peer.message(bot, "Hi Alice, how can I help?")
 ])
 
-{:ok, response} = Honchox.Peer.chat(peer, "What should we do next?", session: session)
+{:ok, response} = Honchox.Peer.chat(alice, "What should we do next?", session: session)
 ```
+
+The Honchox client is stateless and immutable: functions return resource
+structs that carry client and workspace context without mutating the original
+client.
+
+Maps are used for metadata, configuration, filters, and internal raw payloads;
+primary public domain values are SDK structs and helpers such as
+`Honchox.Peer.message/3`.
 
 ## Modules
 

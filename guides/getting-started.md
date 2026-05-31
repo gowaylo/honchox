@@ -10,7 +10,7 @@ Add `honchox` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:honchox, "~> 0.1.0"}
+    {:honchox, "~> 0.2.0"}
   ]
 end
 ```
@@ -48,6 +48,10 @@ client = Honchox.new(
 )
 ```
 
+The client is stateless and immutable. Resource functions return structs that
+carry the configured client and workspace context forward without mutating the
+original client.
+
 ### Client options
 
 | Option          | Default                                         | Description                                      |
@@ -62,7 +66,9 @@ client = Honchox.new(
 ## Core workflow
 
 SDK-shaped entry points start from a configured client and return resource
-structs that carry the client and workspace context forward:
+structs that carry the client and workspace context forward. Maps remain useful
+for metadata, configuration, filters, and internal raw payloads, but primary
+public domain values are structs and SDK helpers:
 
 ```elixir
 client = Honchox.new(workspace_id: "my-workspace")

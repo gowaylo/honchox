@@ -58,7 +58,7 @@ defmodule Honchox do
     * `:base_url` — API base URL. Falls back to `HONCHO_URL` env var, then
       `#{@default_base_url}`. (default: `"#{@default_base_url}"`)
     * `:workspace_id` — client workspace ID. Falls back to `HONCHO_WORKSPACE_ID`,
-      then `"default"`. Resource calls still require `:workspace_id` today.
+      then `"default"`.
     * `:timeout` — receive timeout in milliseconds (default: `#{@default_timeout}`)
     * `:max_retries` — max retries on transient failures (default: `#{@default_max_retries}`)
 
@@ -139,5 +139,4 @@ defmodule Honchox do
        Honchox.Page.from_api(data, &Honchox.Session.from_api(client, client.workspace_id, &1))}
     end
   end
-
 end

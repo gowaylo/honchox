@@ -31,8 +31,6 @@ defmodule Honchox do
     * `Honchox.Workspaces` — workspace lifecycle, search, queue status, dream scheduling
     * `Honchox.Peers` — peer lifecycle, chat, context, representation, cards
     * `Honchox.Sessions` — session lifecycle, messages, peers, context, files
-    * `Honchox.Conclusions` — conclusion CRUD and semantic search
-    * `Honchox.Observations` — backward-compatible aliases for conclusions
 
   ## Low-level HTTP
 

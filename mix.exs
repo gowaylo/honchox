@@ -70,7 +70,6 @@ defmodule Honchox.MixProject do
         Honchox.Workspaces,
         Honchox.Peers,
         Honchox.Sessions,
-        Honchox.Conclusions,
         Honchox.Keys
       ],
       "High-level": [Honchox.PeerWorkspaceQA],

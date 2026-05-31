@@ -41,6 +41,19 @@ defmodule Honchox.Peer do
     }
   end
 
+  @spec conclusions(t()) :: Honchox.ConclusionScope.t()
+  def conclusions(%__MODULE__{} = peer), do: conclusions_of(peer, peer)
+
+  @spec conclusions_of(t(), t() | String.t()) :: Honchox.ConclusionScope.t()
+  def conclusions_of(%__MODULE__{} = observer, observed) do
+    %Honchox.ConclusionScope{
+      client: observer.client,
+      workspace_id: observer.workspace_id,
+      observer_id: observer.id,
+      observed_id: id_or_self(observed)
+    }
+  end
+
   @spec chat(t(), String.t(), keyword() | map()) ::
           {:ok, String.t() | nil} | {:error, Honchox.Error.t()}
   def chat(%__MODULE__{client: client, id: peer_id} = peer, query, opts \\ []) do

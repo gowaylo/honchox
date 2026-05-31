@@ -38,18 +38,13 @@ defmodule Honchox.API.Conclusions do
     HTTP.post(client, "#{workspace_path(client)}/conclusions/query", body)
   end
 
-  @spec create(Client.t(), String.t(), String.t(), [String.t()], keyword() | map()) ::
+  @spec create(Client.t(), String.t(), String.t(), [String.t() | map()], keyword() | map()) ::
           {:ok, term()} | {:error, Honchox.Error.t()}
   def create(%Client{} = client, observer_id, observed_id, conclusions, opts \\ []) do
     body = %{
       conclusions:
         Enum.map(conclusions, fn conclusion ->
-          %{
-            content: conclusion,
-            observer_id: observer_id,
-            observed_id: observed_id,
-            session_id: opt(opts, :session_id)
-          }
+          normalize_conclusion(conclusion, observer_id, observed_id, opt(opts, :session_id))
         end)
     }
 
@@ -71,5 +66,25 @@ defmodule Honchox.API.Conclusions do
       |> compact()
 
     HTTP.post(client, "#{workspace_path(client)}/peers/#{observer_id}/representation", body)
+  end
+
+  defp normalize_conclusion(conclusion, observer_id, observed_id, session_id)
+       when is_binary(conclusion) do
+    %{
+      content: conclusion,
+      observer_id: observer_id,
+      observed_id: observed_id,
+      session_id: session_id
+    }
+  end
+
+  defp normalize_conclusion(conclusion, observer_id, observed_id, session_id)
+       when is_map(conclusion) do
+    %{
+      content: opt(conclusion, :content),
+      observer_id: observer_id,
+      observed_id: observed_id,
+      session_id: opt(conclusion, :session_id) || session_id
+    }
   end
 end

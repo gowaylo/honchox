@@ -145,7 +145,11 @@ project_file_tool =
               |> Enum.take(limit)
 
             {:ok,
-             %{root: project_root, path: Path.relative_to(path, project_root), entries: entries}}
+             Jason.encode!(%{
+               root: project_root,
+               path: Path.relative_to(path, project_root),
+               entries: entries
+             })}
           else
             {:error, "Not a directory: #{relative_path}"}
           end
@@ -159,11 +163,11 @@ project_file_tool =
               |> Enum.join()
 
             {:ok,
-             %{
+             Jason.encode!(%{
                path: Path.relative_to(path, project_root),
                content: content,
                truncated_to_lines: limit
-             }}
+             })}
           else
             {:error, "Not a regular file: #{relative_path}"}
           end
@@ -191,7 +195,7 @@ project_file_tool =
               )
 
             results = output |> String.split("\n", trim: true) |> Enum.take(limit)
-            {:ok, %{query: query, results: results, truncated_to_results: limit}}
+            {:ok, Jason.encode!(%{query: query, results: results, truncated_to_results: limit})}
           end
 
         {other, _} ->
@@ -336,7 +340,20 @@ loop = fn loop, state ->
       case Agent.execute(agent, state) do
         {:ok, next_state} ->
           assistant_message = List.last(next_state.messages)
-          content = Map.get(assistant_message, :content) || inspect(assistant_message)
+
+          content =
+            case Map.get(assistant_message, :content) do
+              content when is_list(content) ->
+                Enum.map_join(content, "", fn
+                  %LangChain.Message.ContentPart{content: text} -> text
+                  text when is_binary(text) -> text
+                  other -> inspect(other)
+                end)
+
+              content ->
+                content || inspect(assistant_message)
+            end
+
           IO.puts("agent> #{content}\n")
           loop.(loop, next_state)
 

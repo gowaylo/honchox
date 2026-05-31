@@ -140,13 +140,13 @@ defmodule Honchox.Sagents.Tools do
   defp search_messages(%{"observer_id" => observer_id, "query" => query} = args, %{client: client}) do
     with {:ok, messages} <-
            Honchox.Peer.search(peer(client, observer_id), query, common_opts(args)) do
-      {:ok, %{messages: Enum.map(messages, &message_map/1)}}
+      ok_json(%{messages: Enum.map(messages, &message_map/1)})
     end
   end
 
   defp get_peer_context(%{"observer_id" => observer_id} = args, %{client: client}) do
     with {:ok, context} <- Honchox.Peer.context(peer(client, observer_id), common_opts(args)) do
-      {:ok, Map.from_struct(context)}
+      ok_json(Map.from_struct(context))
     end
   end
 
@@ -163,7 +163,7 @@ defmodule Honchox.Sagents.Tools do
            |> peer(observer_id)
            |> Honchox.Peer.conclusions_of(observed_id)
            |> Honchox.ConclusionScope.create(conclusions) do
-      {:ok, %{conclusions: Enum.map(created, &Map.from_struct/1)}}
+      ok_json(%{conclusions: Enum.map(created, &Map.from_struct/1)})
     end
   end
 
@@ -177,14 +177,14 @@ defmodule Honchox.Sagents.Tools do
       end
 
     case Honchox.schedule_dream(client, observer_id, opts) do
-      :ok -> {:ok, %{scheduled: true}}
+      :ok -> ok_json(%{scheduled: true})
       {:error, error} -> {:error, inspect(error)}
     end
   end
 
   defp queue_status(args, %{client: client}) do
     with {:ok, status} <- Honchox.queue_status(client, common_opts(args)) do
-      {:ok, Map.from_struct(status)}
+      ok_json(Map.from_struct(status))
     end
   end
 
@@ -202,6 +202,8 @@ defmodule Honchox.Sagents.Tools do
 
   defp maybe_put(opts, _key, nil), do: opts
   defp maybe_put(opts, key, value), do: Keyword.put(opts, key, value)
+
+  defp ok_json(value), do: {:ok, Jason.encode!(value)}
 
   defp peer(client, peer_id) do
     %Honchox.Peer{id: peer_id, workspace_id: client.workspace_id, client: client}

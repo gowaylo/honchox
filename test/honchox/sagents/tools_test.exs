@@ -57,8 +57,10 @@ defmodule Honchox.Sagents.ToolsTest do
                nil
              )
 
-    assert result == %{
-             messages: [%{id: "msg-1", peer_id: "alice", content: "Alice likes blue."}]
+    assert Jason.decode!(result) == %{
+             "messages" => [
+               %{"id" => "msg-1", "peer_id" => "alice", "content" => "Alice likes blue."}
+             ]
            }
   end
 

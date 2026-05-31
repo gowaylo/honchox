@@ -12,7 +12,7 @@ Rule for every task run: update this index first/last and mark the relevant task
 - [x] [Task 04 — Structs and API response conversion](.tasks/04-structs-and-conversion.md)
 - [x] [Task 05 — Client entry points](.tasks/05-client-entry-points.md)
 - [x] [Task 06 — Peer methods](.tasks/06-peer-methods.md)
-- [ ] [Task 07 — Session methods](.tasks/07-session-methods.md)
+- [x] [Task 07 — Session methods](.tasks/07-session-methods.md)
 - [ ] [Task 08 — Conclusions and legacy Observations decision](.tasks/08-conclusions-observations.md)
 - [ ] [Task 09 — Remove or privatize old raw-map API](.tasks/09-cleanup-old-api.md)
 - [ ] [Task 10 — Documentation and examples](.tasks/10-documentation-examples.md)

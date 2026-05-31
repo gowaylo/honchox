@@ -59,16 +59,16 @@ original client.
 | `:api_key`      | `HONCHO_API_KEY` env var                        | Admin API key (required unless `:jwt`)           |
 | `:jwt`          | *(none)*                                        | Scoped JWT token (see [Scoped Keys](scoped-keys.html)) |
 | `:base_url`     | `https://api.honcho.dev`                        | API base URL                                     |
-| `:workspace_id` | `HONCHO_WORKSPACE_ID` env var, then `"default"` | Workspace used by SDK-shaped resource helpers    |
+| `:workspace_id` | `HONCHO_WORKSPACE_ID` env var, then `"default"` | Workspace used by resource helpers               |
 | `:timeout`      | `60_000`                                        | Receive timeout in ms                            |
 | `:max_retries`  | `2`                                             | Retries on transient failures                    |
 
 ## Core workflow
 
-SDK-shaped entry points start from a configured client and return resource
+Resource entry points start from a configured client and return resource
 structs that carry the client and workspace context forward. Maps remain useful
 for metadata, configuration, filters, and internal raw payloads, but primary
-public domain values are structs and SDK helpers:
+public domain values are structs and helper functions:
 
 ```elixir
 client = Honchox.new(workspace_id: "my-workspace")

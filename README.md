@@ -7,7 +7,7 @@ Req-based Elixir client for the [Honcho](https://honcho.dev) v3 API.
 
 Honchox wraps [Req](https://hexdocs.pm/req) with built-in authentication,
 transient retry logic, and structured error handling to provide a struct-first
-SDK-shaped interface to the Honcho API.
+Elixir interface to the Honcho API.
 
 ## Installation
 
@@ -44,14 +44,14 @@ structs that carry client and workspace context without mutating the original
 client.
 
 Maps are used for metadata, configuration, filters, and internal raw payloads;
-primary public domain values are SDK structs and helpers such as
+primary public domain values are structs and helper functions such as
 `Honchox.Peer.message/3`.
 
 ## Modules
 
 | Module | Description |
 |--------|-------------|
-| `Honchox` | Client initialization and SDK-shaped entry points |
+| `Honchox` | Client initialization and resource entry points |
 | `Honchox.Workspace` | Workspace struct |
 | `Honchox.Peer` | Peer struct methods for chat, context, cards, search, and sessions |
 | `Honchox.Session` | Session struct methods for messages, peers, context, and files |

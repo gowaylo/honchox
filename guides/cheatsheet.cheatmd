@@ -11,7 +11,7 @@ client = Honchox.new(
 
 The Honchox client is stateless and immutable. Use maps for metadata,
 configuration, filters, and internal raw payloads; primary public domain values
-are structs and SDK helpers.
+are structs and helper functions.
 
 ## Workspace
 
